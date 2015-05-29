@@ -116,12 +116,12 @@ while (i<=length(Identifiers)),
       end
    end 
    sd = dir (char(Identifiers(i)));
-	ns = length(sd);
-	for (j=1:1:ns)
-		if (~strcmp(sd(j).name, '.') & ~strcmp(sd(j).name, '..'))
-			cnt = cnt + 1;
-			if (~isempty(Opt.NoExt)), 
-				sd(j).name = RemoveExtension (sd(j).name, Opt.NoExt);
+   ns = length(sd);
+   for (j=1:1:ns)
+      if (~strcmp(sd(j).name, '.') & ~strcmp(sd(j).name, '..'))
+         cnt = cnt + 1;
+		 if (~isempty(Opt.NoExt)),
+		 	sd(j).name = RemoveExtension (sd(j).name, Opt.NoExt);
 			end
 			switch Opt.LsType,
 				case 'l', 

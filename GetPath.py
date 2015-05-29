@@ -15,7 +15,7 @@ def get_path(path_string):
     p = '.'
     f = ''
     split_head_tail = os.path.split(path_string)
-    if split_head_tail != ('',''):
+    if split_head_tail != ('', ''):
         err = 0
         p = split_head_tail[0]
         f = split_head_tail[1]
