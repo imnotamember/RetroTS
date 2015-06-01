@@ -3,8 +3,12 @@ __author__ = 'Joshua Zosky'
 import numpy
 #from scipy import *
 #from scipy.fftpack import fft
-from scipy.signal import lfilter
-from scipy.signal import firwin
+from numpy import real, imag
+from numpy.fft import fft, ifft
+from numpy import zeros, ones, nonzero
+from pylab import plot, subplot, show, text, axis, style, figure
+from scipy.signal import lfilter, firwin
+from scipy.interpolate import interp1d
 import glob
 """
 function [r, e] = PeakFinder(var_vector, Opt)
@@ -39,32 +43,25 @@ def fftsegs(ww, po, nv):
         # clear bli ble
         bli = []
         ble = []
-        print ww, po, nv
         # % How many blocks?
         jmp = numpy.floor((100-po)*ww/100) # jump from block to block
         nblck = nv/jmp
-        print nblck
-        ib = 1
+        ib = 0
         cnt = 0
-        bli.append(ib)
-        ble.append(min(ib+ww-1, nv))
-        ib += jmp
-        print ib
-        while cnt < 1 or ble[cnt] < nv:
+        while ble == [] or ble[-1] < (nv-1):
             bli.append(ib)
             ble.append(min(ib+ww-1, nv))
             cnt += 1
             ib += jmp
-            print ib
         # If the last block is too small, spread the love
-        if ble[cnt] - bli[cnt] < (0.1 * ww): # Too small a last block, merge
-            ble[cnt-1] = ble[cnt]              # into previous
+        if ble[-1] - bli[-1] < (0.1 * ww): # Too small a last block, merge
+            ble[-2] = ble[-1]              # into previous
             cnt -= 1
-            ble = ble[1:cnt]
-            bli = bli[1:cnt]
+            del ble[-1]
+            del bli[-1]
             out = 1
-        elif ble[cnt] - bli[cnt] < (0.75 * ww):  # Too large to merge, spread it
-            ww = ww + numpy.floor((ble[cnt]-bli[cnt])/nblck)
+        elif ble[-1] - bli[-1] < (0.75 * ww):  # Too large to merge, spread it
+            ww = ww + numpy.floor((ble[-1] - bli[-1])/nblck)
             out = 0
         else: # Last block big enough, proceed
             out = 1
@@ -74,41 +71,89 @@ def fftsegs(ww, po, nv):
     # ble
     # ble - bli + 1
     # now figure out the number of estimates each point of the time series gets
-    num = numpy.zeros((nv,1))
+    num = zeros((nv, 1))
     cnt = 1
-    print 'here'
     while cnt <= len(ble):
-        num[bli[cnt]:ble[cnt]] = num[bli[cnt]:ble[cnt]] + numpy.ones((ble[cnt] - bli[cnt] + 1, 1))
+        num[bli[-1]:ble[-1]+1] = num[bli[-1]:ble[-1]+1] + ones((ble[-1] - bli[-1] + 1, 1))
         cnt += 1
-    print bli, ble, num
     return bli, ble, num
 
 def analytic_signal(vi, windwidth, percover, win):
     nvi = len(vi)
-    h = numpy.zeros(vi.shape)
+    #h = zeros(vi.shape)
     bli, ble, num = fftsegs(windwidth, percover, nvi)
-    print bli, ble, num
     for ii in range(len(bli)):
-        v = vi[bli[ii]:ble[ii]]
+        v = vi[bli[ii]:ble[ii]+1]
         nv = len(v)
-        print nv
-
-        '''
         if win == 1:
-            fv = fft(v.*hamming(nv))
+            fv = fft(v * numpy.hamming(nv))
         else:
             fv = fft(v)
-        wind = zeros(size(v))
+        wind = zeros(v.size)
         # zero negative frequencies, double positive frequencies
-        if (iseven(nv)):
-            wind([1 nv/2+1]) = 1 # keep DC
-            wind([2:nv/2]) = 2  # double pos. freq
+        if nv % 2 == 0:
+            wind[0] = 1  # keep DC
+            wind[(nv / 2)] = 1
+            wind[1:(nv / 2)] = 2  # double pos. freq
+
         else:
-            wind([1]) = 1
-            wind([2:(nv+1)/2]) = 2
-        h(bli(ii):ble(ii)) = h(bli(ii):ble(ii)) + ifft(fv.*wind)
-    h = h./num;
-    return'''
+            wind[1] = 1
+            wind[range(2, (nv + 1) / 2)] = 2
+        h = ifft(fv * wind)
+    for i in range(len(h)):
+        h[i] /= numpy.complex(num[i])
+    return h
+
+
+def remove_pn_duplicates(tp, vp, tn, vn, quiet):
+    ok = zeros((len(tp), 1), dtype=numpy.int8)
+    ok[0] = 1
+    j = 0
+    for i in range(1, min(len(tp), len(tn))):
+        #  0.3 is the minimum time before the next beat
+        if (tp[i] != tp[i-1]) and (tn[i] != tn[i-1]) and (tp[i] - tp[i-1] > 0.3):
+            j += 1
+            ok[j] = i
+        else:
+            if not quiet:
+                print 'Dropped peak at %s sec' % tp[i]
+    ok = ok[:j+1]
+    tp = tp[ok]
+    vp = vp[ok]
+    tn = tn[ok]
+    vn = vn[ok]
+    return tp, vp, tn, vn
+
+
+def remove_duplicates(t, v, quiet):
+    j = 0
+    for i in range(1,len(t) + 1):
+        #  0.3 is the minimum time before the next beat
+        if t[i] != t[i - 1] and (t[i] - t[i - 1]) > 0.3:
+            j += 1
+            t[j] = t[i]
+            v[j] = v[i]
+        elif quiet == 0:
+            print 'Dropped peak at %s sec' % t[i]
+    t = t[:j + 1]
+    v = v[:j + 1]
+    return t, v
+
+
+def clean_resamp(v):
+    i_nan = nonzero(numpy.isnan(v))  # the bad
+    i_nan = i_nan[0]
+    i_good = nonzero(numpy.isfinite(v))  # the good
+    i_good = i_good[0]
+    for i in range(0, len(i_nan)):
+        if i_nan[i] < i_good[1]:
+            v[i_nan[i]] = v[i_good[1]]
+        elif i_nan[i] > i_good[-1]:
+            v[i_nan[i]]= v[i_good[-1]]
+        else:
+            print 'Error: Unexpected NaN case'
+            v[i_nan[i]] = 0
+    return v
 
 
 def peak_finder(var_vector,
@@ -201,9 +246,10 @@ def peak_finder(var_vector,
              'RVT': []
              }
         r_list.append(r)
-    #for i_column in range(nl):
-        #if L and not os.path.isdir(L):
-            #r_list[i_column]['v_name'] = '%s%s' % (sys.path, L[i_column]['name'])
+    '''
+    for i_column in range(nl):
+        if L and not os.path.isdir(L):
+            r_list[i_column]['v_name'] = '%s%s' % (sys.path, L[i_column]['name'])'''
     r['v_name'] = var_vector
     #with open(r['v_name'], "rb") as f:
         #v = f.read()
@@ -228,173 +274,160 @@ def peak_finder(var_vector,
     v_np = lfilter(b, 1, v_np)
     v_np = numpy.flipud(v_np)
     # Get the analytic signal
-    print 'got here'
-    X = analytic_signal(v_np, as_window_width * phys_fs, as_percover, as_fftwin)
-    """
-    r_list[i_column]['x'] = analytic_signal(v, as_window_width*phys_fs, as_percover, as_fftwin)  # # RESOLVE THIS: as_window_width.*phys_fs
-        # LEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERELEFT OFF HERE
-        # Using local version to illustrate, can use hilbert
-        # Doing ffts over smaller windows can improve peak detection in the few instances that go undetected but
-        # what value to use is not clear and there seems to be at times more errors introduced in the lower envelope.
-        nt = len(r_list[i_column]['x'])
-        r_list[i_column]['t'] = range(0,(nt - 1) / phys_fs, 1 / phys_fs)  # # % FIX FIX FIX
-        iz = find(imag(r_list[i_column]['x'](1:nt - 1)).*imag(r_list[i_column]['x'](2:nt)) <= 0)
-        polall = -sign(imag(r_list[i_column]['x'](1:nt-1)) - imag(r_list[i_column]['x'](2:nt)))
+    r['x'] = analytic_signal(v_np, as_window_width * phys_fs, as_percover, as_fftwin)
+    # Using local version to illustrate, can use hilbert
+    # Doing ffts over smaller windows can improve peak detection in the few instances that go undetected but
+    # what value to use is not clear and there seems to be at times more errors introduced in the lower envelope.
+    nt = len(r['x'])
+    r['t'] = numpy.arange(0., float(nt) / phys_fs, (1. / phys_fs))  # # % FIX FIX FIX
+    iz = nonzero((r['x'][0:nt-1].imag * r['x'][1:nt].imag) <= 0)
+    iz = iz[0]
+    polall = -numpy.sign(r['x'][0:nt-1].imag - r['x'][1:nt].imag)
+    pk = (r['x'][iz]).real
+    pol = polall[iz]
+    tiz = []
+    for i in iz:
+        tiz.append(r['t'][i])
+    ppp = nonzero(pol > 0)
+    ppp = ppp[0]
+    p_trace = []
+    tp_trace = []
+    for i in ppp:
+        p_trace.append(pk[i])
+        tp_trace.append(tiz[i])
+    ppp = nonzero(pol < 0)
+    ppp = ppp[0]
+    n_trace = []
+    tn_trace = []
+    for i in ppp:
+        n_trace.append(pk[i])
+        tn_trace.append(tiz[i])
 
-        pk = real(r_list[i_column]['x'](iz))
-        pol = polall(iz)
-        tiz = r_list[i_column].t(iz)
+    if quiet == 0:
+        print '--> Load signal\n--> Smooth signal\n--> Calculate analytic signal Z\n--> Find zero crossing of imag(Z)\n'
+        figure(1)
+        subplot(211)
+        plot(r['t'], real(r['x']), 'g')
+        # plot (r_list[i_column].t, imag(r_list[i_column]['x']),'g')
+        plot(tp_trace, p_trace, 'ro')
+        plot(tn_trace, n_trace, 'bo')
+        # plot (r_list[i_column].t, abs(r_list[i_column]['x']),'k')
+        subplot (413)
+        vn = real(r['x']) / (abs(r['x']) + numpy.spacing(1))
+        plot(r['t'], vn, 'g')
+        ppp = nonzero(pol > 0)
+        ppp = ppp[0]
+        for i in ppp:
+            plot(tiz[i], vn[iz[i]], 'ro')
+        ppp = nonzero(pol < 0)
+        ppp = ppp[0]
+        for i in ppp:
+            plot(tiz[i], vn[iz[i]], 'bo')
+        if demo:
+            # need to add a pause here - JZ
+            # uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
+            pass
 
-        '''
-        ppp = find(pol>0)
-        ptrace = pk(ppp)
-        tptrace = tiz(ppp)
-        ppp = find(pol<0)
-        ntrace = pk(ppp)
-        tntrace = tiz(ppp)
-        if (~Opt.Quiet),
-          fprintf(2,[ '--> Load signal\n',...
-                      '--> Smooth signal\n',...
-                      '--> Calculate analytic signal Z\n',...
-                      '--> Find zero crossing of imag(Z)\n',...
-                      '\n'])
+    # Some polishing
+    if 1:
+        nww = numpy.ceil((window_width / 2) * phys_fs)
+        pkp = pk
+        r['iz'] = iz
+        for i in range(len(iz)):
+            n0 = max(2,iz[i]-nww)
+            n1 = min(nt,iz[i]+nww)+1
+            temp = (r['x'][n0:n1]).real
+            print pol[i]
+            if pol[i] > 0:
+                xx, ixx = numpy.max(temp, 0),numpy.argmax(temp, 0)
+            else:
+                xx, ixx = numpy.min(temp, 0),numpy.argmin(temp, 0)
+            r['iz'][i] = n0 + ixx - 1
+            pkp[i] = xx
+        tizp = r['t'][r['iz']]
 
-          figure(1) clf
-          subplot(211)
-          plot (r_list[i_column].t, real(r_list[i_column]['x']),'g') hold on
-          %plot (r_list[i_column].t, imag(r_list[i_column]['x']),'g')
-          plot (tptrace, ptrace, 'ro')
-          plot (tntrace, ntrace, 'bo')
-          %plot (r_list[i_column].t, abs(r_list[i_column]['x']),'k')
+        ppp = nonzero(pol > 0)
+        ppp = ppp[0]
+        r['p_trace'] = pkp[ppp]
+        r['tp_trace'] = tizp[ppp]
+        ppp = nonzero(pol < 0)
+        ppp = ppp[0]
+        r['n_trace'] = pkp[ppp]
+        r['tn_trace'] = tizp[ppp]
 
-          subplot (413)
-          vn = real(r_list[i_column]['x'])./(abs(r_list[i_column]['x'])+eps)
-          plot (r_list[i_column].t, vn, 'g') hold on
-          ppp = find(pol>0)
-          plot (tiz(ppp), vn(iz(ppp)), 'ro')
-          ppp = find(pol<0)
-          plot (tiz(ppp), vn(iz(ppp)), 'bo')
-
-             drawnow 
-             if (Opt.Demo),
-                uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
-             end
-       end
-
-
-
-       %Some polishing
-       if (1),
-          nww = ceil(window_width/2 * Opt.PhysFS)
-          pkp = pk
-          r_list[i_column].iz = iz
-          for (i=1:1:length(iz)),
-             n0 = max(2,iz(i)-nww)
-             n1 = min(nt,iz(i)+nww)
-             if (pol(i) > 0),
-                [xx, ixx] = max((real(r_list[i_column]['x'](n0:n1))))
-             else,
-                [xx, ixx] = min((real(r_list[i_column]['x'](n0:n1))))
-             end
-             r_list[i_column].iz(i) = n0+ixx-2
-             pkp(i) = xx
-          end
-          tizp = r_list[i_column].t(r_list[i_column].iz)
-
-          ppp = find(pol>0)
-          r_list[i_column].ptrace = pkp(ppp)
-          r_list[i_column].tptrace = tizp(ppp)
-          ppp = find(pol<0)
-          r_list[i_column].ntrace = pkp(ppp)
-          r_list[i_column].tntrace = tizp(ppp)
-
-          if (NoDups),
-          %remove duplicates
-             if (Opt.SepDups),
-                fprintf(2,'YOU SHOULD NOT BE USING THIS.\n')
-                fprintf(2,' left here for the record\n')
-                [r_list[i_column].tptrace, r_list[i_column].ptrace] = ...
-                            remove_duplicates(r_list[i_column].tptrace, r_list[i_column].ptrace, Opt)
-                [r_list[i_column].tntrace, r_list[i_column].ntrace] = ...
-                            remove_duplicates(r_list[i_column].tntrace, r_list[i_column].ntrace, Opt)
-             else,
-                [r_list[i_column].tptrace, r_list[i_column].ptrace,...
-                 r_list[i_column].tntrace, r_list[i_column].ntrace] = ...
-                            remove_PNduplicates(r_list[i_column].tptrace, r_list[i_column].ptrace,...
-                            r_list[i_column].tntrace, r_list[i_column].ntrace, Opt)
-             end
-             if (length(r_list[i_column].ptrace) ~= length(r_list[i_column].ntrace)),
-                fprintf(1,'Bad news in tennis shoes. I''m outa here.\n')
+        if no_dups:
+            # remove duplicates
+            if sep_dups:
+                print 'YOU SHOULD NOT BE USING THIS.\n'
+                print ' left here for the record\n'
+                [r['tp_trace'], r['p_trace']] = remove_duplicates(r['tp_trace'], r['p_trace'], quiet)
+                [r['tn_trace'], r['n_trace']] = remove_duplicates(r['tn_trace'], r['n_trace'], quiet)
+            else:
+                r['tp_trace'], r['p_trace'], r['tn_trace'], r['n_trace'] = \
+                    remove_pn_duplicates(r['tp_trace'], r['p_trace'], r['tn_trace'], r['n_trace'], quiet)
+            if len(r['p_trace']) != len(r['n_trace']):
+                print 'Bad news in tennis shoes. I\'m outta here.\n'
                 e = True
-                return
-             end
-          end
+                return r, e
 
-          if (~Opt.Quiet),
-             fprintf(2,[ '--> Improved peak location\n',...
-                         '--> Removed duplicates \n',...
-                         '\n'])
-             subplot(211)
-             plot( r_list[i_column].tptrace, r_list[i_column].ptrace,'r+',...
-                   r_list[i_column].tptrace, r_list[i_column].ptrace,'r')
-             plot( r_list[i_column].tntrace, r_list[i_column].ntrace,'b+',...
-                   r_list[i_column].tntrace, r_list[i_column].ntrace,'b')
-             drawnow 
-             if (Opt.Demo),
-                uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
-             end
-          end
-       else
-          tizp = tiz
-          r_list[i_column].iz = iz
-          pkp = pk
-          r_list[i_column].ptrace = ptrace
-          nR(i_column).ptrace = nptrace
-       end
+        if quiet == 0:
+            print '--> Improved peak location\n--> Removed duplicates'
+            style.use('ggplot')
+            subplot(211)
+            axis([0, 250, -1000, 3000])
+            plot(r['tp_trace'], r['p_trace'], 'r+', r['tp_trace'], r['p_trace'], 'r')
+            plot(r['tn_trace'], r['n_trace'], 'b+', r['tn_trace'], r['n_trace'], 'b')
+            if demo:
+                # need to add a pause here - JZ
+                # uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
+                pass
+    else:
+        tizp = tiz
+        r['iz'] = iz
+        pkp = pk
+        r['p_trace'] = p_trace
+        r['n_trace'] = n_trace  # This seems like a mistake, the .m file's version is highly suspect
 
+    # Calculate the period
+    nptrc = len(r['tp_trace'])
+    r['prd'] = r['tp_trace'][1:nptrc] - r['tp_trace'][0:nptrc - 1]
+    r['p_trace_mid_prd'] = (r['p_trace'][1:nptrc] + r['p_trace'][0:nptrc - 1]) / 2.0
+    r['t_mid_prd'] = (r['tp_trace'][1:nptrc] + r['tp_trace'][0:nptrc - 1]) / 2.0
+    if quiet == 0:
+        print '--> Calculated the period (from beat to beat)\n'
+        subplot(211)
+        plot(r['t_mid_prd'], r['p_trace_mid_prd'], 'kx')
+        for i in range(0, len(r['prd'])):
+            text(r['t_mid_prd'][i], r['p_trace_mid_prd'][i], ('%.2f' % r['prd'][i]))
+        if demo:
+            # need to add a pause here - JZ
+            # uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
+            pass
+    show()
 
-       %Calculate the period
-       nptrc = length(r_list[i_column].tptrace)
-       r_list[i_column].prd = (r_list[i_column].tptrace(2:nptrc) - r_list[i_column].tptrace(1:nptrc-1) )
-       r_list[i_column].ptracemidprd = (   r_list[i_column].ptrace(2:nptrc) ...
-                                + r_list[i_column].ptrace(1:nptrc-1) ) ./2.0
-       r_list[i_column].tmidprd = (  r_list[i_column].tptrace(2:nptrc) ...
-                          + r_list[i_column].tptrace(1:nptrc-1)) ./2.0
-       if (~Opt.Quiet),
-             fprintf(2,[ '--> Calculated the period (from beat to beat)\n',...
-                         '\n'])
-          plot (r_list[i_column].tmidprd, r_list[i_column].ptracemidprd,'kx')
-          for (i=1:1:length(r_list[i_column].prd)),
-           text( r_list[i_column].tmidprd(i), r_list[i_column].ptracemidprd(i),...
-                 sprintf('%.2f', r_list[i_column].prd(i)))
-          end
-             drawnow 
-             if (Opt.Demo),
-                uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
-             end
-       end
+    if resample_kernel != '':
+        # Interpolate to slice sampling time grid:
+        r['tR'] = numpy.arange(0, max(r['t'])+(1. / resample_fs), 1. / resample_fs)
+        # Squeeze these arrays down from an [x,y] shape to an [x,] shape in order to use interp1d
+        r['tp_trace'] = r['tp_trace'].squeeze()
+        r['p_trace'] = r['p_trace'].squeeze()
+        r['p_trace_R'] = interp1d(r['tp_trace'], r['p_trace'], resample_kernel, bounds_error=False)
+        r['p_trace_R'] = r['p_trace_R'](r['tR'])
+        r['tn_trace'] = r['tn_trace'].squeeze()
+        r['n_trace'] = r['n_trace'].squeeze()
+        r['n_trace_R'] = interp1d( r['tn_trace'], r['n_trace'], resample_kernel, bounds_error=False)(r['tR'])
+        r['t_mid_prd'] = r['t_mid_prd'].squeeze()
+        r['prd'] = r['prd'].squeeze()
+        r['prdR'] = interp1d(r['t_mid_prd'], r['prd'], resample_kernel, bounds_error=False)(r['tR'])
+        # You get NaN when tR exceeds original signal time, so set those
+        # to the last interpolated value
+        r['p_trace_R'] = clean_resamp(r['p_trace_R'])
+        r['n_trace_R'] = clean_resamp(r['n_trace_R'])
+        r['prdR'] = clean_resamp(r['prdR'])
 
-       if (~isempty(Opt.ResamKernel)),
-          %interpolate to slice sampling time grid:
-          r_list[i_column].tR = [0:1./Opt.ResampFS:max(r_list[i_column].t)]
-          r_list[i_column].ptraceR = interp1( r_list[i_column].tptrace', r_list[i_column].ptrace, ...
-                                     r_list[i_column].tR,Opt.ResamKernel)
-          r_list[i_column].ntraceR = interp1( r_list[i_column].tntrace', r_list[i_column].ntrace, ...
-                                     r_list[i_column].tR,Opt.ResamKernel)
-          r_list[i_column].prdR = interp1(r_list[i_column].tmidprd, r_list[i_column].prd, ...
-                                 r_list[i_column].tR,Opt.ResamKernel)
-          %you get NaN when tR exceeds original signal time, so set those
-          %to the last interpolated value
-          r_list[i_column].ptraceR = clean_resamp(r_list[i_column].ptraceR)
-          r_list[i_column].ntraceR = clean_resamp(r_list[i_column].ntraceR)
-          r_list[i_column].prdR = clean_resamp(r_list[i_column].prdR)
-       end
+        #if (i_column != nl):
+            #input('Hit enter to proceed...','s')
+        if quiet == 0:
+            plotsign2(1)
 
-     if (i_column ~= nl), input ('Hit enter to proceed...','s') end
-
-    end
-       if (~Opt.Quiet),   plotsign2(1) end
-
-    return
-    '''
-    """
+    return r, e
