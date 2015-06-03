@@ -427,7 +427,7 @@ def peak_finder(var_vector,
 
         #if (i_column != nl):
             #input('Hit enter to proceed...','s')
-        if quiet == 0:
-            plotsign2(1)
+        #if quiet == 0:
+            #plotsign2(1)
 
     return r, e
