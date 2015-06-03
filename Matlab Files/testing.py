@@ -1,7 +1,8 @@
 __author__ = 'Joshua'
-'''
+
 import PeakFinder as pf
-a = pf.peak_finder(var_vector='Resp_epiRT_scan_14.dat',
+
+a, b = pf.peak_finder(var_vector='Resp_epiRT_scan_14.dat',
                    phys_fs=50,
                    zero_phase_offset=0,
                    quiet=0,
@@ -14,8 +15,8 @@ a = pf.peak_finder(var_vector='Resp_epiRT_scan_14.dat',
                    as_percover=0,
                    as_fftwin=0,
                    sep_dups=0)
-print a
-b = pf.peak_finder(var_vector='ECG_epiRT_scan_14.dat',
+
+c, d = pf.peak_finder(var_vector='ECG_epiRT_scan_14.dat',
                    phys_fs=50,
                    zero_phase_offset=0,
                    quiet=0,
@@ -28,15 +29,23 @@ b = pf.peak_finder(var_vector='ECG_epiRT_scan_14.dat',
                    as_percover=0,
                    as_fftwin=0,
                    sep_dups=0)
-print b
+
+for key, item in a.items():
+    print "%s = %s" % (key, item)
+for key, item in c.items():
+    print "%s = %s" % (key, item)
+
 '''
 import RetroTS as rts
 
-rts.retro_ts(respiration_file='Resp_epiRT_scan_14.dat',
+a = rts.retro_ts(respiration_file='Resp_epiRT_scan_14.dat',
              cardiac_file='ECG_epiRT_scan_14.dat',
              PhysFS=50,
              Nslices=20,
              VolTR=2)
+for key, item in a:
+    print "%s = %s" % (key, item)
+'''
 '''
 for i in a:
     print '%s' i

@@ -21,7 +21,18 @@ def retro_ts(respiration_file,cardiac_file,PhysFS, Nslices, VolTR,
             ShowGraphs = 1
             ):
     SliceOffset = zeros(0)
-
+    '''
+    # Create option copy for each type of signal
+    OptR = Opt
+    OptR.fcutoff = Opt.RespCutoffFreq;
+    OptR.AmpPhase = 1;   %amplitude based phase for respiration
+    %OptR.as_percover = 50; %percent overlap of windows for fft
+    %OptR.as_windwidth = 0; %window width in seconds for fft, 0 for full window
+    %OptR.as_fftwin = 0 ; %1 == hamming window. 0 == no windowing
+    OptE = Opt;
+    OptE.fcutoff = Opt.CardCutoffFreq;
+    OptE.AmpPhase = 0;   %time based phase for cardiac signal
+    '''
     # Get the peaks for R and E
     if respiration_file:
         respiration_peak, error = peak_finder(respiration_file)
@@ -37,3 +48,6 @@ def retro_ts(respiration_file,cardiac_file,PhysFS, Nslices, VolTR,
             return
     else:
         cardiac_peak = {}
+    print respiration_peak.keys()
+    print cardiac_peak.keys()
+    return

@@ -374,7 +374,6 @@ def peak_finder(var_vector,
             print '--> Improved peak location\n--> Removed duplicates'
             style.use('ggplot')
             subplot(211)
-            axis([0, 250, -1000, 3000])
             plot(r['tp_trace'], r['p_trace'], 'r+', r['tp_trace'], r['p_trace'], 'r')
             plot(r['tn_trace'], r['n_trace'], 'b+', r['tn_trace'], r['n_trace'], 'b')
             if demo:
