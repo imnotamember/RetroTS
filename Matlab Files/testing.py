@@ -1,5 +1,5 @@
 __author__ = 'Joshua'
-
+'''
 import PeakFinder as pf
 
 a, b = pf.peak_finder(var_vector='Resp_epiRT_scan_14.dat',
@@ -34,7 +34,7 @@ for key, item in a.items():
     print "%s = %s" % (key, item)
 for key, item in c.items():
     print "%s = %s" % (key, item)
-
+'''
 '''
 import RetroTS as rts
 
@@ -56,3 +56,14 @@ for i in a:
 ### p_trace_R is high and doesn't change at 50, it changes at 244!
 ### n_trace_R is high and doesn't change at 5, it changes at 161!
 ### prdR is whacky
+
+def sf(a, b):
+    if not kwargs:
+        kwargs['a='] = 'm'
+        kwargs['b='] = 13424
+    for key, value in kwargs.iteritems():
+        print key, value
+
+s = {'d': 1, 'c': 'asdf', 'a': 'asdfjkl;', 'b': 23458098}
+sf(**s)
+#sf()

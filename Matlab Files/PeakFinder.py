@@ -168,8 +168,7 @@ def peak_finder(var_vector,
                 as_window_width=0,
                 as_percover=0,
                 as_fftwin=0,
-                sep_dups=0,
-                ):
+                sep_dups=0):
     """
     Example: PeakFinder('Resp*.1D')
     or PeakFinder(v) where v is a column vector
@@ -241,7 +240,7 @@ def peak_finder(var_vector,
              'prd': [],
              't_mid_prd': [],
              'p_trace_mid_prd': [],
-             'phz': [],
+             'phase': [],
              'RV': [],
              'RVT': []
              }

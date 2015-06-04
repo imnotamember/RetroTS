@@ -1,7 +1,77 @@
 __author__ = 'Joshua Zosky'
 
+from numpy import ones, nonzero, pi
+from numpy import size
 
-def phase_estimator(**kwargs, **kwargs):
+
+def phase_base(amp_type, phasee):
+    """
+    
+    :param amp_type:    if 0, it is a time-based phase estimation
+                        if 1, it is an amplitude-based phase estimation
+    :param phasee: phasee information
+    :return:
+    """
+    if amp_type = 1:
+        # Calculate the phase of the trace, with the peak to be the start of the phase
+        nptrc = len(phasee['tp_trace'])
+        phasee['phase'] = -2 * ones(size(phasee['t']))
+        i=0
+        j=0
+        while i <= (nptrc-1):
+            while phasee['t'][j] < phasee['tp_trace'][i+1]:
+                if phasee['t'][j] >= phasee['tp_trace'][i]:
+                    # Note: Using a constant 244 period for each interval
+                    # causes slope discontinuity within a period.
+                    # One should resample period[i] so that it is
+                    # estimated at each time in phasee['t'][j],
+                    # dunno if that makes much of a difference in the end however.
+                    phasee['phase'][j] = phasee['t'][j] - phasee['tp_trace'][i] / phasee['prd'][i]\
+                                         + phasee['zero_phase_offset']
+                    if phasee.phase[j] < 0:
+                        phasee['phase'][j] = -phasee['phase'][j]
+                    if phasee.phase[j] > 1:
+                        phasee['phase'][j] -= 1
+                j += 1
+            i += 1
+
+            # Remove the points flagged as unset
+            temp = nonzero(phasee['phase']<-1)
+            phasee['phase'][temp]  = 0.0
+            # Change phase to radians
+            phasee['phase'] = phasee['phase'] * 2. * pi
+    else:
+        pass
+
+def phase_estimator(v_name='',
+                    t=[],
+                    x=[],
+                    iz=[],   # zero crossing (peak) locations
+                    p_trace=[],
+                    tp_trace=[],
+                    n_trace=[],
+                    tn_trace=[],
+                    prd=[],
+                    t_mid_prd=[],
+                    p_trace_mid_prd=[],
+                    phase=[],
+                    RV=[],
+                    RVT=[],
+                    var_vector,
+                    phys_fs=(1 / 0.025),
+                    zero_phase_offset=0.5,
+                    quiet=0,
+                    resample_fs=(1 / 0.025),
+                    f_cutoff=10,
+                    fir_order=80,
+                    resample_kernel='linear',
+                    demo=0,
+                    as_window_width=0,
+                    as_percover=0,
+                    as_fftwin=0,
+                    sep_dups=0,
+                    phasee_list=0
+                    ):
     """
     Example: PhaseEstimator.phase_estimator(respiration_peak, )
     or PhaseEstimator.phase_estimator(v) where v is a column vector
@@ -12,7 +82,7 @@ def phase_estimator(**kwargs, **kwargs):
                                 0.5 means the middle of the period, 0 means the 1st peak
     :param quiet:
     :param resample_fs:
-    :param f_cutoff:
+    :param frequency_cutoff:
     :param fir_order: BC ???
     :param resample_kernel:
     :param demo:
@@ -20,13 +90,11 @@ def phase_estimator(**kwargs, **kwargs):
     :param as_percover:
     :param fftwin:
     :param sep_dups:
-    :return: [r, e] r = Peak of var_vector; e = error value
+    :return: *_phased: phase estimation of input signal
     """
-    if amp_phase:
-       for (icol=1:1:length(R)),
-          %Calculate the phase of the trace, with the peak
-          %to be the start of the phase
-          nptrc = length(R(icol).tptrace);
-          R(icol).phz=-2.*ones(size(R(icol).t));
-          i=1;
-          j=1;
+    if type(phasee_list) is type([]):
+        for phasee_column in phasee_list:
+            phase_base(more_info['amp_phase'], phasee_column)
+    else:
+        phase_base(more_info, phasee)
+    
