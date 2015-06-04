@@ -56,7 +56,7 @@ for i in a:
 ### p_trace_R is high and doesn't change at 50, it changes at 244!
 ### n_trace_R is high and doesn't change at 5, it changes at 161!
 ### prdR is whacky
-
+'''
 def sf(a, b):
     if not kwargs:
         kwargs['a='] = 'm'
@@ -67,3 +67,13 @@ def sf(a, b):
 s = {'d': 1, 'c': 'asdf', 'a': 'asdfjkl;', 'b': 23458098}
 sf(**s)
 #sf()
+'''
+import zscale as z
+
+x = []
+with open('my_data.txt','r') as f:
+    b = f.readlines()
+    x.append(b)
+
+y = z.z_scale(x, 2.412205169368427e+03, 0, [2, 98])
+print y

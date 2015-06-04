@@ -3,10 +3,10 @@ __author__ = 'Joshua Zosky'
 import numpy
 #from scipy import *
 #from scipy.fftpack import fft
-from numpy import real, imag
+from numpy import real
 from numpy.fft import fft, ifft
 from numpy import zeros, ones, nonzero
-from pylab import plot, subplot, show, text, axis, style, figure
+from pylab import plot, subplot, show, text, style, figure
 from scipy.signal import lfilter, firwin
 from scipy.interpolate import interp1d
 import glob

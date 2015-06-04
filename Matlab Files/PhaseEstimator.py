@@ -40,7 +40,64 @@ def phase_base(amp_type, phasee):
             phasee['phase'][temp]  = 0.0
             # Change phase to radians
             phasee['phase'] = phasee['phase'] * 2. * pi
-    else:
+    else: # phase based on amplitude
+        # at first scale to the max
+        mxamp = max(phasee['p_trace'])
+        gR = zscale(phasee['v'], mxamp, 0) # Scale, per Glover 2000's paper
+        bins = [1:1:100]./100 * mxamp
+        [hb,bbins] = hist(gR, bins)
+        if show_graphs:
+            bar (bins, hb)
+        #find the polarity of each time point in v
+        i = 1 itp = 1 inp = 1
+        while (  i <= length(phasee['v']) & ...
+            phasee['t'](i) < phasee['tp_trace'](1) & ...
+            phasee['t'](i) < phasee['tn_trace'](1) ),
+        phasee['phase_pol'](i) = 0
+        i = i + 1
+        if (phasee['tp_trace'](1) < phasee['tn_trace'](1)), 
+            cpol=-1    #expiring phase, peak behind us
+            itp = 2
+         else:
+         cpol = 1 #inspiring phase (bottom behind us)
+         inp = 2
+      end
+      phasee['phase_pol'] = zeros(size(phasee['v']))
+      #add a fake point to tptrace and tntrace to avoid ugly if statements
+      phasee['tp_trace'] = [phasee['tp_trace'] phasee['t'](end)]
+      phasee['tn_trace'] = [phasee['tn_trace'] phasee['t'](end)]
+      while(i <= length(phasee['v'])),
+         phasee['phase_pol'](i) = cpol
+         if (phasee['t'](i) == phasee['tp_trace'](itp)),
+            cpol = -1 itp = min([itp+1, length(phasee['tp_trace'])])
+         elseif (phasee['t'](i) == phasee['tn_trace'](inp)),
+            cpol = +1 inp = min([inp+1, length(phasee['tn_trace'])])
+         end
+         #cpol, inp, itp, i, R
+         i = i + 1
+      end
+      phasee['tp_trace'] = [phasee['tp_trace'](1:end-1)]
+      phasee['tn_trace'] = [phasee['tn_trace'](1:end-1)]
+        if show_graphs:
+          clf
+          plot (phasee['t'], gR,'b') hold on
+          ip = find(phasee['phase_pol']>0)
+          plot (phasee['t'](ip), 0.55 * mxamp,'r.')
+          in = find(phasee['phase_pol']<0)
+          plot (phasee['t'](in),0.45 * mxamp,'g.')
+      end
+      #Now that we have the polarity, without computing sign(dR/dt) 
+      # as in Glover et al 2000, calculate the phase per eq. 3 of that paper
+      #first the sum in the numerator
+      gR = round(gR/mxamp * 100)+1 gR(find(gR>100))=100
+      shb = sum(hb)
+      hbsum = zeros(1,100)
+      hbsum(1)=hb(1)./shb
+      for (i=2:1:100),
+         hbsum(i) = hbsum(i-1)+hb(i)./shb
+      end
+      for(i=1:1:length(phasee['t'])),
+         phasee['phase'](i) = pi * hbsum(round(gR(i))) * phasee['phase_pol'](i)
         pass
 
 def phase_estimator(v_name='',
@@ -70,7 +127,8 @@ def phase_estimator(v_name='',
                     as_percover=0,
                     as_fftwin=0,
                     sep_dups=0,
-                    phasee_list=0
+                    phasee_list=0,
+                    show_graphs=0
                     ):
     """
     Example: PhaseEstimator.phase_estimator(respiration_peak, )

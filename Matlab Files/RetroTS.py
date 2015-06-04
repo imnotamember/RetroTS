@@ -19,7 +19,7 @@ def retro_ts(respiration_file,cardiac_file,PhysFS, Nslices, VolTR,
             Card_out = 0,
             Resp_out = 0,
             SliceOrder = 'alt+z',
-            ShowGraphs = 1
+            show_graphs = 1
             ):
     SliceOffset = zeros(0)
     main_info = {}
