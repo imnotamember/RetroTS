@@ -1,18 +1,35 @@
 __author__ = 'Joshua Zosky'
 
-from numpy import ones, nonzero, pi
-from numpy import size
+from numpy import zeros, ones, nonzero, pi, argmin, sin, cos
+from numpy import size, arange, clip, histogram, r_, Inf, divide
+from zscale import z_scale
+import matplotlib.pyplot as plt
 
+
+def my_hist(x, bin_centers):
+    """
+    This frivolous yet convenient conversion from bin-edges to bin-centers is from Stack Overflow user Bas Swinckels
+    http://stackoverflow.com/questions/18065951/why-does-numpy-histogram-python-leave-off-one-element-as-compared-to-hist-in-m
+    :param x:dataset
+    :param bin_centers:bin values in a list to be moved from edges to centers
+    :return: counts = the data in bin centers ready for pyplot.bar
+    """
+    bin_edges = r_[-Inf, 0.5 * (bin_centers[:-1] + bin_centers[1:]),
+        Inf]
+    counts, edges = histogram(x, bin_edges)
+    return counts
 
 def phase_base(amp_type, phasee):
     """
     
+
+    :type phasee: object
     :param amp_type:    if 0, it is a time-based phase estimation
                         if 1, it is an amplitude-based phase estimation
     :param phasee: phasee information
     :return:
     """
-    if amp_type = 1:
+    if amp_type == 1:
         # Calculate the phase of the trace, with the peak to be the start of the phase
         nptrc = len(phasee['tp_trace'])
         phasee['phase'] = -2 * ones(size(phasee['t']))
@@ -43,62 +60,119 @@ def phase_base(amp_type, phasee):
     else: # phase based on amplitude
         # at first scale to the max
         mxamp = max(phasee['p_trace'])
-        gR = zscale(phasee['v'], mxamp, 0) # Scale, per Glover 2000's paper
-        bins = [1:1:100]./100 * mxamp
-        [hb,bbins] = hist(gR, bins)
-        if show_graphs:
-            bar (bins, hb)
+        gR = z_scale(phasee['v'], 0, mxamp) # Scale, per Glover 2000's paper
+        bins = arange(.01, 1.01, .01) * mxamp
+        hb_value = my_hist(gR,bins)
+        #hb_value = histogram(gR, bins)
+        if phasee['show_graphs'] == 1:
+            center = (bins[:-1] + bins[1:]) / 2
+            plt.bar(center, hb_value[:len(hb_value)-1])#, align='center')
+            plt.show()
         #find the polarity of each time point in v
-        i = 1 itp = 1 inp = 1
-        while (  i <= length(phasee['v']) & ...
-            phasee['t'](i) < phasee['tp_trace'](1) & ...
-            phasee['t'](i) < phasee['tn_trace'](1) ),
-        phasee['phase_pol'](i) = 0
-        i = i + 1
-        if (phasee['tp_trace'](1) < phasee['tn_trace'](1)), 
-            cpol=-1    #expiring phase, peak behind us
+        i = 0
+        itp = 0
+        inp = 0
+        tp = phasee['tp_trace'][0]
+        tn = phasee['tn_trace'][0]
+        while (i <= len(phasee['v'])) and (phasee['t'][i] < tp) and (phasee['t'][i] < tn):
+            phasee['phase_pol'].append(0)
+            i += 1
+        if tp < tn:
+            # Expiring phase (peak behind us)
+            cpol = -1
             itp = 2
-         else:
-         cpol = 1 #inspiring phase (bottom behind us)
-         inp = 2
-      end
-      phasee['phase_pol'] = zeros(size(phasee['v']))
-      #add a fake point to tptrace and tntrace to avoid ugly if statements
-      phasee['tp_trace'] = [phasee['tp_trace'] phasee['t'](end)]
-      phasee['tn_trace'] = [phasee['tn_trace'] phasee['t'](end)]
-      while(i <= length(phasee['v'])),
-         phasee['phase_pol'](i) = cpol
-         if (phasee['t'](i) == phasee['tp_trace'](itp)),
-            cpol = -1 itp = min([itp+1, length(phasee['tp_trace'])])
-         elseif (phasee['t'](i) == phasee['tn_trace'](inp)),
-            cpol = +1 inp = min([inp+1, length(phasee['tn_trace'])])
-         end
-         #cpol, inp, itp, i, R
-         i = i + 1
-      end
-      phasee['tp_trace'] = [phasee['tp_trace'](1:end-1)]
-      phasee['tn_trace'] = [phasee['tn_trace'](1:end-1)]
-        if show_graphs:
-          clf
-          plot (phasee['t'], gR,'b') hold on
-          ip = find(phasee['phase_pol']>0)
-          plot (phasee['t'](ip), 0.55 * mxamp,'r.')
-          in = find(phasee['phase_pol']<0)
-          plot (phasee['t'](in),0.45 * mxamp,'g.')
-      end
-      #Now that we have the polarity, without computing sign(dR/dt) 
-      # as in Glover et al 2000, calculate the phase per eq. 3 of that paper
-      #first the sum in the numerator
-      gR = round(gR/mxamp * 100)+1 gR(find(gR>100))=100
-      shb = sum(hb)
-      hbsum = zeros(1,100)
-      hbsum(1)=hb(1)./shb
-      for (i=2:1:100),
-         hbsum(i) = hbsum(i-1)+hb(i)./shb
-      end
-      for(i=1:1:length(phasee['t'])),
-         phasee['phase'](i) = pi * hbsum(round(gR(i))) * phasee['phase_pol'](i)
-        pass
+        else:
+            # Inspiring phase (bottom behind us)
+            cpol = 1
+            inp = 2
+        phasee['phase_pol'] = zeros(size(phasee['v']))  # Not sure why you would replace the
+                                                        # list that you created 10 lines prior to this
+        # Add a fake point to tptrace and tntrace to avoid ugly if statements
+        phasee['tp_trace'].append(phasee['t'][-1])
+        phasee['tn_trace'].append(phasee['t'][-1])
+        while i < len(phasee['v']):
+            phasee['phase_pol'][i] = cpol
+            if phasee['t'][i] == phasee['tp_trace'][itp]:
+                cpol = -1
+                itp = min(itp + 1, len(phasee['tp_trace']))
+            elif phasee['t'][i] == phasee['tn_trace'][inp]:
+                cpol = 1
+                inp = min(inp + 1, len(phasee['tn_trace']))
+            # cpol, inp, itp, i, R
+            i += 1
+        del phasee['tp_trace'][-1]
+        del phasee['tn_trace'][-1]
+        if phasee['show_graphs'] == 1:
+            #clf
+            plt.plot(phasee['t'], gR,'b')
+            ipositive = nonzero(phasee['phase_pol'] > 0)
+            ipositive = ipositive[0]
+            ipositive_x = []
+            for i in ipositive:
+                ipositive_x.append(phasee['t'][i])
+            ipositive_y = zeros(size(ipositive_x))
+            ipositive_y.fill(0.55 * mxamp)
+            plt.plot(ipositive_x, ipositive_y, 'r.')
+            inegative = nonzero(phasee['phase_pol'] < 0 )
+            inegative = inegative[0]
+            inegative_x = []
+            for i in inegative:
+                inegative_x.append(phasee['t'][i])
+            inegative_y = zeros(size(inegative_x))
+            inegative_y.fill(0.45 * mxamp)
+            plt.plot(inegative_x, inegative_y, 'g.')
+            plt.show()
+        # Now that we have the polarity, without computing sign(dR/dt)
+        #   as in Glover et al 2000, calculate the phase per eq. 3 of that paper
+        # First the sum in the numerator
+        for i, val in enumerate(gR):
+            gR[i] = (round(val / mxamp * 100) + 1)
+        gR = clip(gR, 0, 99)
+        shb = sum(hb_value)
+        hbsum = []
+        hbsum.append(float(hb_value[0]) / shb)
+        for i in range(1, 100):
+            hbsum.append(hbsum[i - 1] + (float(hb_value[i]) / shb))
+        for i in range(len(phasee['t'])):
+            phasee['phase'].append(pi * hbsum[int(gR[i])-1] * phasee['phase_pol'][i])
+
+    # Time series time vector
+    phasee['time_series_time'] = arange(0, (max(phasee['t']) - 0.5 * phasee['volume_tr']), phasee['volume_tr'])
+    phasee['phase_slice'] = zeros((len(phasee['time_series_time']),phasee['number_of_slices']))
+    phasee['phase_slice_reg'] = zeros((len(phasee['time_series_time']),4,phasee['number_of_slices']))
+    for i_slice in range(phasee['number_of_slices']):
+        tslc = phasee['time_series_time'] + phasee['slice_offset'][i_slice]
+        for i in range(len(phasee['time_series_time'])):
+            imin = argmin(abs(tslc[i] - phasee['t']))
+            #mi = abs(tslc[i] - phasee['t']) # probably not needed
+            phasee['phase_slice'][i, i_slice] = phasee['phase'][imin]
+        # Make regressors for each slice
+        phasee['phase_slice_reg'][:, 0, i_slice] = sin(phasee['phase_slice'][:,i_slice])
+        phasee['phase_slice_reg'][:, 1, i_slice] = cos(phasee['phase_slice'][:,i_slice])
+        phasee['phase_slice_reg'][:, 2, i_slice] = sin(2 * phasee['phase_slice'][:,i_slice])
+        phasee['phase_slice_reg'][:, 3, i_slice] = cos(2 * phasee['phase_slice'][:,i_slice])
+
+    if (phasee['quiet'] != 1) and phasee['show_graphs']:
+        print '--> Calculated phase'
+        plt.subplot(413)
+        a = divide(divide(phasee['phase'], 2), pi)
+        plt.plot(phasee['t'], divide(divide(phasee['phase'], 2), pi), 'm')
+        if 'phase_r' in phasee:
+            plt.plot(phasee['tR'], divide(divide(phasee['phase_r'], 2), pi), 'm-.')
+        plt.subplot(414)
+        plt.plot(phasee['time_series_time'], phasee['phase_slice'][:,1], 'ro',
+                phasee['time_series_time'], phasee['phase_slice'][:,2], 'bo',
+                phasee['time_series_time'], phasee['phase_slice'][:,2], 'b-')
+        plt.plot(phasee['t'], phasee['phase'], 'k')
+        #grid on
+        # title it
+        plt.title(phasee['v_name'])
+        plt.show()
+        # Need to implement this yet
+        #if phasee['Demo']:
+            #uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
+    return
+
 
 def phase_estimator(v_name='',
                     t=[],
@@ -114,7 +188,7 @@ def phase_estimator(v_name='',
                     phase=[],
                     RV=[],
                     RVT=[],
-                    var_vector,
+                    var_vector=[],
                     phys_fs=(1 / 0.025),
                     zero_phase_offset=0.5,
                     quiet=0,
@@ -153,6 +227,6 @@ def phase_estimator(v_name='',
     if type(phasee_list) is type([]):
         for phasee_column in phasee_list:
             phase_base(more_info['amp_phase'], phasee_column)
+
     else:
         phase_base(more_info, phasee)
-    
