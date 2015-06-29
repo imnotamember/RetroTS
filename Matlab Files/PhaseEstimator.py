@@ -14,8 +14,7 @@ def my_hist(x, bin_centers):
     :param bin_centers:bin values in a list to be moved from edges to centers
     :return: counts = the data in bin centers ready for pyplot.bar
     """
-    bin_edges = r_[-Inf, 0.5 * (bin_centers[:-1] + bin_centers[1:]),
-        Inf]
+    bin_edges = r_[-Inf, 0.5 * (bin_centers[:-1] + bin_centers[1:]), Inf]
     counts, edges = histogram(x, bin_edges)
     return counts
 
@@ -33,10 +32,10 @@ def phase_base(amp_type, phasee):
         # Calculate the phase of the trace, with the peak to be the start of the phase
         nptrc = len(phasee['tp_trace'])
         phasee['phase'] = -2 * ones(size(phasee['t']))
-        i=0
-        j=0
+        i = 0
+        j = 0
         while i <= (nptrc-1):
-            while phasee['t'][j] < phasee['tp_trace'][i+1]:
+            while phasee['t'][j] < phasee['tp_trace'][i]:
                 if phasee['t'][j] >= phasee['tp_trace'][i]:
                     # Note: Using a constant 244 period for each interval
                     # causes slope discontinuity within a period.
@@ -45,9 +44,9 @@ def phase_base(amp_type, phasee):
                     # dunno if that makes much of a difference in the end however.
                     phasee['phase'][j] = phasee['t'][j] - phasee['tp_trace'][i] / phasee['prd'][i]\
                                          + phasee['zero_phase_offset']
-                    if phasee.phase[j] < 0:
+                    if phasee['phase'][j] < 0:
                         phasee['phase'][j] = -phasee['phase'][j]
-                    if phasee.phase[j] > 1:
+                    if phasee['phase'][j] > 1:
                         phasee['phase'][j] -= 1
                 j += 1
             i += 1
@@ -171,39 +170,42 @@ def phase_base(amp_type, phasee):
         # Need to implement this yet
         #if phasee['Demo']:
             #uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
-    return
+    return phasee
 
 
-def phase_estimator(v_name='',
-                    t=[],
-                    x=[],
-                    iz=[],   # zero crossing (peak) locations
-                    p_trace=[],
-                    tp_trace=[],
-                    n_trace=[],
-                    tn_trace=[],
-                    prd=[],
-                    t_mid_prd=[],
-                    p_trace_mid_prd=[],
-                    phase=[],
-                    RV=[],
-                    RVT=[],
-                    var_vector=[],
-                    phys_fs=(1 / 0.025),
-                    zero_phase_offset=0.5,
-                    quiet=0,
-                    resample_fs=(1 / 0.025),
-                    f_cutoff=10,
-                    fir_order=80,
-                    resample_kernel='linear',
-                    demo=0,
-                    as_window_width=0,
-                    as_percover=0,
-                    as_fftwin=0,
-                    sep_dups=0,
-                    phasee_list=0,
-                    show_graphs=0
-                    ):
+def phase_estimator(amp_phase=0, phase_info={}):
+    '''
+    v_name='',
+    amp_phase=0,
+    t=[],
+    x=[],
+    iz=[],   # zero crossing (peak) locations
+    p_trace=[],
+    tp_trace=[],
+    n_trace=[],
+    tn_trace=[],
+    prd=[],
+    t_mid_prd=[],
+    p_trace_mid_prd=[],
+    phase=[],
+    RV=[],
+    RVT=[],
+    var_vector=[],
+    phys_fs=(1 / 0.025),
+    zero_phase_offset=0.5,
+    quiet=0,
+    resample_fs=(1 / 0.025),
+    f_cutoff=10,
+    fir_order=80,
+    resample_kernel='linear',
+    demo=0,
+    as_window_width=0,
+    as_percover=0,
+    as_fftwin=0,
+    sep_dups=0,
+    phasee_list=0,
+    show_graphs=0
+    '''
     """
     Example: PhaseEstimator.phase_estimator(respiration_peak, )
     or PhaseEstimator.phase_estimator(v) where v is a column vector
@@ -224,9 +226,43 @@ def phase_estimator(v_name='',
     :param sep_dups:
     :return: *_phased: phase estimation of input signal
     """
-    if type(phasee_list) is type([]):
-        for phasee_column in phasee_list:
-            phase_base(more_info['amp_phase'], phasee_column)
-
+    phasee = dict(v_name='',
+                  t=[],
+                  x=[],
+                  iz=[],   # zero crossing (peak) locations
+                  volume_tr=2,
+                  p_trace=[],
+                  tp_trace=[],
+                  n_trace=[],
+                  tn_trace=[],
+                  prd=[],
+                  t_mid_prd=[],
+                  p_trace_mid_prd=[],
+                  phase=[],
+                  RV=[],
+                  RVT=[],
+                  var_vector=[],
+                  phys_fs=(1 / 0.025),
+                  zero_phase_offset=0.5,
+                  quiet=0,
+                  resample_fs=(1 / 0.025),
+                  f_cutoff=10,
+                  fir_order=80,
+                  resample_kernel='linear',
+                  demo=0,
+                  as_window_width=0,
+                  as_percover=0,
+                  as_fftwin=0,
+                  sep_dups=0,
+                  phasee_list=0,
+                  show_graphs=0,
+                  number_of_slices=0)
+    phasee.update(phase_info)
+    if isinstance(phasee['phasee_list'], type([])):
+        return_phase_list = []
+        for phasee_column in phasee['phasee_list']:
+            return_phase.append(phase_base(amp_phase, phasee_column))
+        return return_phase_list
     else:
-        phase_base(more_info, phasee)
+        return_phase = phase_base(amp_phase, phasee)
+        return return_phase

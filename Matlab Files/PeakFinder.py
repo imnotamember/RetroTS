@@ -161,27 +161,26 @@ def peak_finder(var_vector,
                 zero_phase_offset=0.5,
                 quiet=0,
                 resample_fs=(1 / 0.025),
-                f_cutoff=10,
+                frequency_cutoff=10,
                 fir_order=80,
-                resample_kernel='linear',
+                interpolation_style='linear',
                 demo=0,
                 as_window_width=0,
                 as_percover=0,
                 as_fftwin=0,
                 sep_dups=0):
     """
-    Example: PeakFinder('Resp*.1D')
-    or PeakFinder(v) where v is a column vector
-    if v is a matrix, each column is processed separately.
+    Example: PeakFinder('Resp*.1D') or PeakFinder(var_vector) where var_vector is a column vector.
+    If var_vector is a matrix, each column is processed separately.
     :param var_vector: column vector--list of list(s)
     :param phys_fs: Sampling frequency
     :param zero_phase_offset: Fraction of the period that corresponds to a phase of 0
                                 0.5 means the middle of the period, 0 means the 1st peak
     :param quiet:
     :param resample_fs:
-    :param f_cutoff:
+    :param frequency_cutoff:
     :param fir_order: BC ???
-    :param resample_kernel:
+    :param interpolation_style:
     :param demo:
     :param as_window_width:
     :param as_percover:
@@ -203,9 +202,9 @@ def peak_finder(var_vector,
     # Some filtering
     nyquist_filter = phys_fs / 2.0
     # w[1] = 0.1/filter_nyquist                                         # Cut frequencies below 0.1Hz
-    # w[2] = f_cutoff/filter_nyquist                                    # Upper cut off frequency normalized
+    # w[2] = frequency_cutoff/filter_nyquist                                    # Upper cut off frequency normalized
     # b = signal.firwin(fir_order, w, 'bandpass')                       # FIR filter of order 40
-    w = f_cutoff / nyquist_filter
+    w = frequency_cutoff / nyquist_filter
     b = firwin(numtaps=(fir_order + 1), cutoff=w, window='hamming')        # FIR filter of order 40
     b = numpy.array(b)
     no_dups = 1                                     # Remove duplicates that might come up when improving peak location
@@ -336,7 +335,6 @@ def peak_finder(var_vector,
             n0 = max(2,iz[i]-nww)
             n1 = min(nt,iz[i]+nww)+1
             temp = (r['x'][n0:n1]).real
-            print pol[i]
             if pol[i] > 0:
                 xx, ixx = numpy.max(temp, 0),numpy.argmax(temp, 0)
             else:
@@ -403,20 +401,20 @@ def peak_finder(var_vector,
             pass
     show()
 
-    if resample_kernel != '':
+    if interpolation_style != '':
         # Interpolate to slice sampling time grid:
         r['tR'] = numpy.arange(0, max(r['t'])+(1. / resample_fs), 1. / resample_fs)
         # Squeeze these arrays down from an [x,y] shape to an [x,] shape in order to use interp1d
         r['tp_trace'] = r['tp_trace'].squeeze()
         r['p_trace'] = r['p_trace'].squeeze()
-        r['p_trace_R'] = interp1d(r['tp_trace'], r['p_trace'], resample_kernel, bounds_error=False)
+        r['p_trace_R'] = interp1d(r['tp_trace'], r['p_trace'], interpolation_style, bounds_error=False)
         r['p_trace_R'] = r['p_trace_R'](r['tR'])
         r['tn_trace'] = r['tn_trace'].squeeze()
         r['n_trace'] = r['n_trace'].squeeze()
-        r['n_trace_R'] = interp1d( r['tn_trace'], r['n_trace'], resample_kernel, bounds_error=False)(r['tR'])
+        r['n_trace_R'] = interp1d( r['tn_trace'], r['n_trace'], interpolation_style, bounds_error=False)(r['tR'])
         r['t_mid_prd'] = r['t_mid_prd'].squeeze()
         r['prd'] = r['prd'].squeeze()
-        r['prdR'] = interp1d(r['t_mid_prd'], r['prd'], resample_kernel, bounds_error=False)(r['tR'])
+        r['prdR'] = interp1d(r['t_mid_prd'], r['prd'], interpolation_style, bounds_error=False)(r['tR'])
         # You get NaN when tR exceeds original signal time, so set those
         # to the last interpolated value
         r['p_trace_R'] = clean_resamp(r['p_trace_R'])

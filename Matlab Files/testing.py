@@ -35,17 +35,19 @@ for key, item in a.items():
 for key, item in c.items():
     print "%s = %s" % (key, item)
 '''
-'''
+
 import RetroTS as rts
 
 a = rts.retro_ts(respiration_file='Resp_epiRT_scan_14.dat',
-             cardiac_file='ECG_epiRT_scan_14.dat',
-             PhysFS=50,
-             Nslices=20,
-             VolTR=2)
-for key, item in a:
-    print "%s = %s" % (key, item)
-'''
+                 cardiac_file='ECG_epiRT_scan_14.dat',
+                 phys_fs=50,
+                 number_of_slices=20,
+                 vol_tr=2
+                 )
+print a.keys()
+for key in a.keys():
+    print key
+
 '''
 for i in a:
     print '%s' i
@@ -68,14 +70,10 @@ s = {'d': 1, 'c': 'asdf', 'a': 'asdfjkl;', 'b': 23458098}
 sf(**s)
 #sf()
 '''
+'''
 import zscale as z
 import numpy
-'''
-x = []
-with open('xfile.txt','r') as f:
-    b = f.readlines()
-    x.append(b)
-'''
+
 x = open('xfile.txt', 'r').read().splitlines()
 for i in range(len(x)):
     x[i] = float(x[i])
@@ -85,6 +83,7 @@ y = z.z_scale(x, 0, 2412.205169368427)#, [2, 98])
 print y
 
 from PhaseEstimator import phase_base
+from RVT_from_PeakFinder import rvt_from_peakfinder
 
 v = open('v.txt', 'r').read().splitlines()
 for i in range(len(v)):
@@ -103,6 +102,21 @@ for i in range(len(tptrace)):
 tntrace = open('tntrace.txt', 'r').read().splitlines()
 for i in range(len(tntrace)):
     tntrace[i] = float(tntrace[i])
+prd = open('prd.txt', 'r').read().splitlines()
+for i in range(len(prd)):
+    prd[i] = float(prd[i])
+prdR = open('prdR.txt', 'r').read().splitlines()
+for i in range(len(prdR)):
+    prdR[i] = float(prdR[i])
+tmidprd = open('tmidprd.txt', 'r').read().splitlines()
+for i in range(len(tmidprd)):
+    tmidprd[i] = float(tmidprd[i])
+ptraceR = open('ptraceR.txt', 'r').read().splitlines()
+for i in range(len(ptraceR)):
+    ptraceR[i] = float(ptraceR[i])
+ntraceR = open('ntraceR.txt', 'r').read().splitlines()
+for i in range(len(ntraceR)):
+    ntraceR[i] = float(ntraceR[i])
 
 t = numpy.arange(0, 12019)
 t = [float(i) for i in range(len(t))]
@@ -131,7 +145,10 @@ sliceoffset = [0,
 phasee = {'v': v,
           'p_trace': ptrace,
           'n_trace': ntrace,
+          'p_traceR': ptraceR,
+          'n_traceR': ntraceR,
           't': t,
+          'tR': t,
           'tp_trace': tptrace,
           'tn_trace': tntrace,
           'show_graphs': 1,
@@ -141,6 +158,23 @@ phasee = {'v': v,
           'number_of_slices': 20,
           'slice_offset':sliceoffset,
           'quiet': 0,
+          'prd': prd,
+          'prdR': prdR,
+          'tmidprd': tmidprd,
           'v_name': '.\Resp_epiRT_scan_14.dat'
           }
-phase_base(0, phasee)
+opt = {'phys_fs': (1 / 0.025),
+       'zero_phase_offset': 0.5,
+       'quiet': 0,
+       'resample_fs': (1 / 0.025),
+       'f_cutoff': 10,
+       'fir_order': 80,
+       'volume_TR': 2,
+       'RVTshifts': [0,5,10,15,20],
+       'ResamKernel': 'linear',
+       'ShowGraphs': 1,
+       'Demo': 0
+       }
+a = phase_base(0, phasee)
+rvt_from_peakfinder(a, opt)
+'''

@@ -7,28 +7,28 @@ from PhaseEstimator import phase_estimator
 from RVT_from_PeakFinder import rvt_from_peakfinder
 
 
-def retro_ts(respiration_file,cardiac_file,phys_fs, number_of_slices, vol_tr,
-            prefix = 'Output_File_Name',
-            slice_offset = 0,
-            rvt_shifts = range(0, 20, 5),
-            respiration_cutoff_frequency = 3,
-            cardiac_cutoff_frequency = 3,
-            interpolation_style = 'linear',
-            fir_order = 40,
-            quiet = 1,
-            demo = 0,
-            rvt_out = 0,
-            cardiac_out = 0,
-            respiration_out = 0,
-            slice_order = 'alt+z',
-            show_graphs = 1
-            ):
+def retro_ts(respiration_file,cardiac_file,phys_fs, n_slices, vol_tr,
+             prefix = 'Output_File_Name',
+             slice_offset = 0,  #figure this default out - needs to be a matrix of 0's based on Nslices
+             rvt_shifts = range(0, 20, 5),
+             respiration_cutoff_frequency = 3,
+             cardiac_cutoff_frequency = 3,
+             interpolation_style = 'linear',
+             fir_order = 40,
+             quiet = 1,
+             demo = 0,
+             rvt_out = 0,
+             cardiac_out = 0,
+             respiration_out = 0,
+             slice_order = 'alt+z',
+             show_graphs = 1
+             ):
     """
     
     :param respiration_file: 
     :param cardiac_file: 
     :param phys_fs: 
-    :param number_of_slices:
+    :param n_slices: 
     :param vol_tr: 
     :param prefix: 
     :param slice_offset: 
@@ -52,11 +52,11 @@ def retro_ts(respiration_file,cardiac_file,phys_fs, number_of_slices, vol_tr,
     :return:
     """
     if not slice_offset:
-        slice_offset = zeros((number_of_slices, 1))
+        slice_offset = zeros((n_slices, 1))
     main_info = {'respiration_file': respiration_file,
                  'cardiac_file': cardiac_file,
                  'phys_fs': phys_fs,
-                 'number_of_slices': number_of_slices,
+                 'n_slices': n_slices,
                  'vol_tr': vol_tr,
                  'prefix': prefix,
                  'slice_offset': slice_offset,
@@ -75,26 +75,33 @@ def retro_ts(respiration_file,cardiac_file,phys_fs, number_of_slices, vol_tr,
                  }
 
     # Create information copy for each type of signal
-    respiration_info = main_info
-    # Amplitude-based phase for respiration
-    respiration_info['amp_phase'] = 1
-    # respiration_info['as_percover'] = 50  # Percent overlap of windows for fft
-    # respiration_info['as_windwidth'] = 0  # Window width in seconds for fft, 0 for full window
-    # respiration_info['as_fftwin'] = 0     # 1 == hamming window. 0 == no windowing
-    cardiac_info = main_info
-    # Time-based phase for cardiac signal
-    cardiac_info['AmpPhase'] = 0
+    #   as_percover = Percent overlap of windows for fft
+    #   as_windwidth = Window width in seconds for fft, 0 for full window
+    #   as_fftwin = 1 => hamming window. 0 => no windowing
+
+    respiration_info = dict(phys_fs=phys_fs, zero_phase_offset=0, quiet=quiet, resample_fs=phys_fs,
+                            frequency_cutoff=respiration_cutoff_frequency, fir_order=fir_order,
+                            interpolation_style=interpolation_style, demo=demo, as_window_width=0, as_percover=0,
+                            as_fftwin=0, sep_dups=0)
+    cardiac_info = dict(phys_fs=phys_fs, zero_phase_offset=0, quiet=quiet, resample_fs=phys_fs,
+                            frequency_cutoff=cardiac_cutoff_frequency, fir_order=fir_order,
+                            interpolation_style=interpolation_style, demo=demo, as_window_width=0, as_percover=0,
+                            as_fftwin=0, sep_dups=0)
 
     # Get the peaks for R and E
     if respiration_file:
-        respiration_peak, error = peak_finder(respiration_file)
+        respiration_info['var_vector'] = respiration_file
+        respiration_peak, error = peak_finder(**respiration_info)
         if error:
             print 'Died in PeakFinder'
             return
+        else:
+            respiration_info.update(respiration_peak)
     else:
         respiration_peak = {}
     if cardiac_file:
-        cardiac_peak, error = peak_finder(cardiac_file)
+        cardiac_info['var_vector'] = cardiac_file
+        cardiac_peak, error = peak_finder(**cardiac_info)
         if error:
             print 'Died in PeakFinder'
             return
@@ -103,19 +110,41 @@ def retro_ts(respiration_file,cardiac_file,phys_fs, number_of_slices, vol_tr,
 
     main_info['resp_peak'] = respiration_peak
     main_info['card_peak'] = cardiac_peak
-    respiration_info.update(respiration_peak)
-    cardiac_info.update(cardiac_peak)
+    return respiration_info
+    """
+    # amp_phase:    1 => Amplitude-based phase for respiration.
+    #               0 => Time-based phase for cardiac signal
+    respiration_peak['amp_phase'] = 1
+    cardiac_peak['amp_phase'] = 0
+
+    # prd
+    # n_trace_R
+    # iz
+    # tn_trace
+    # t_mid_prd
+    # tR
+    # prdR
+    # p_trace
+    # phase
+    # v_name
+    # p_trace_mid_prd
+    # p_trace_R
+    # RV
+    # n_trace
+    # tp_trace
+    # t
+    # RVT
+    # x
 
     # Get the phase
     if respiration_peak:
         print 'Estimating phase for R'
-        respiration_phased = phase_estimator(1, respiration_info)
-        return respiration_phased
-    if cardiac_peak == {}:
-        print 'Estimating phase for E'
-        cardiac_phased = phase_estimator(*cardiac_info)
 
-    """
+        respiration_phased = phase_estimator(**respiration_peak, **respiration_info)
+    if cardiac_peak:
+        print 'Estimating phase for E'
+        cardiac_phased = phase_estimator(**cardiac_peak, **cardiac_info)
+
     if respiration_phased:
         print "Computing RVT from peaks"
         rvt =  rvt_from_peakfinder(respiration_phased)
