@@ -266,6 +266,7 @@ def peak_finder(var_vector,
     # Remove the mean
     v_np_mean = numpy.mean(v_np)
     v_np = v_np - v_np_mean
+    r['v'] = v_np  # Store it for debugging (found it is used in phase estimator)
     # Filter both ways to cancel phase shift
     v_np = lfilter(b, 1, v_np, axis=0)
     v_np = numpy.flipud(v_np)
@@ -407,18 +408,18 @@ def peak_finder(var_vector,
         # Squeeze these arrays down from an [x,y] shape to an [x,] shape in order to use interp1d
         r['tp_trace'] = r['tp_trace'].squeeze()
         r['p_trace'] = r['p_trace'].squeeze()
-        r['p_trace_R'] = interp1d(r['tp_trace'], r['p_trace'], interpolation_style, bounds_error=False)
-        r['p_trace_R'] = r['p_trace_R'](r['tR'])
+        r['p_trace_r'] = interp1d(r['tp_trace'], r['p_trace'], interpolation_style, bounds_error=False)
+        r['p_trace_r'] = r['p_trace_r'](r['tR'])
         r['tn_trace'] = r['tn_trace'].squeeze()
         r['n_trace'] = r['n_trace'].squeeze()
-        r['n_trace_R'] = interp1d( r['tn_trace'], r['n_trace'], interpolation_style, bounds_error=False)(r['tR'])
+        r['n_trace_r'] = interp1d(r['tn_trace'], r['n_trace'], interpolation_style, bounds_error=False)(r['tR'])
         r['t_mid_prd'] = r['t_mid_prd'].squeeze()
         r['prd'] = r['prd'].squeeze()
         r['prdR'] = interp1d(r['t_mid_prd'], r['prd'], interpolation_style, bounds_error=False)(r['tR'])
         # You get NaN when tR exceeds original signal time, so set those
         # to the last interpolated value
-        r['p_trace_R'] = clean_resamp(r['p_trace_R'])
-        r['n_trace_R'] = clean_resamp(r['n_trace_R'])
+        r['p_trace_r'] = clean_resamp(r['p_trace_r'])
+        r['n_trace_r'] = clean_resamp(r['n_trace_r'])
         r['prdR'] = clean_resamp(r['prdR'])
 
         #if (i_column != nl):

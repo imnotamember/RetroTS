@@ -42,11 +42,12 @@ a = rts.retro_ts(respiration_file='Resp_epiRT_scan_14.dat',
                  cardiac_file='ECG_epiRT_scan_14.dat',
                  phys_fs=50,
                  number_of_slices=20,
-                 vol_tr=2
+                 volume_tr=2
                  )
 print a.keys()
 for key in a.keys():
     print key
+    print a[key]
 
 '''
 for i in a:

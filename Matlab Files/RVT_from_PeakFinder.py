@@ -8,11 +8,12 @@ from pylab import plot, subplot, show, text, style, figure
 from zscale import z_scale
 
 
-def rvt_from_peakfinder(r=[], opt={}, demo=0):
-    print demo
+def rvt_from_peakfinder(r):
+    '''print demo
     if demo:
         quiet = 0
         print quiet
+    '''
     # Calculate RVT
     if len(r['p_trace']) != len(r['n_trace']):
         dd = abs(len(r['p_trace']) - len(r['n_trace']))
@@ -38,15 +39,15 @@ def rvt_from_peakfinder(r=[], opt={}, demo=0):
     # incomplete pair at the end
 
     nptrc = len(r['tp_trace'])
-    r['rvt'] = r['rv'][0:nptrc-1] / r['prd']
-    if r['p_traceR']:
-        r['rvr'] = subtract(r['p_traceR'], r['n_traceR'])
+    r['rvt'] = r['rv'][0:nptrc] / r['prd']
+    if r['p_trace_r'].any:
+        r['rvr'] = subtract(r['p_trace_r'], r['n_trace_r'])
         r['rvtr'] = r['rvr'] / r['prdR']
-        # Smooth RVT so that we can resample it at volume_TR later
-        fnyq = opt['phys_fs'] / 2    # nyquist of physio signal
-        fcut = 2./opt['volume_TR']      # cut below nyquist for volume TR
-        w = opt['f_cutoff'] / fnyq        # cut off frequency normalized
-        b = firwin(numtaps=(opt['fir_order'] + 1), cutoff=w, window='hamming')
+        # Smooth RVT so that we can resample it at volume_tr later
+        fnyq = r['phys_fs'] / 2             # nyquist of physio signal
+        fcut = 2 / r['volume_tr']           # cut below nyquist for volume_tr
+        w = float(r['f_cutoff']) / float(fnyq)     # cut off frequency normalized
+        b = firwin(numtaps=(r['fir_order'] + 1), cutoff=w, window='hamming')
         v = r['rvtr']
         mv = mean(v)
         # remove the mean
@@ -59,26 +60,26 @@ def rvt_from_peakfinder(r=[], opt={}, demo=0):
         r['RVTRS'] = v + mv
 
     # create RVT regressors
-    r['RVTRS_slc'] = zeros((len(opt['RVTshifts']), len(r['time_series_time'])))
-    for i in range(0, len(opt['RVTshifts'])):
-        shf = opt['RVTshifts'][i]
-        nsamp = int(round(shf * opt['phys_fs']))
+    r['RVTRS_slc'] = zeros((len(r['rvt_shifts']), len(r['time_series_time'])))
+    for i in range(0, len(r['rvt_shifts'])):
+        shf = r['rvt_shifts'][i]
+        nsamp = int(round(shf * r['phys_fs']))
         sind = add(range(0, len(r['t'])), nsamp)
         print sind
         sind[nonzero(sind < 0)] = 0
         sind[nonzero(sind > (len(r['t']) - 1))] = len(r['t']) - 1
-        rvt_shf = interp1d(r['t'], r['RVTRS'][sind], opt['ResamKernel'], bounds_error=False)
+        rvt_shf = interp1d(r['t'], r['RVTRS'][sind], r['interpolation_style'], bounds_error=False)
         rvt_shf_y = rvt_shf(r['time_series_time'])
         r['RVTRS_slc'][:][i] = rvt_shf_y
 
-    if opt['quiet'] != 1 and opt['ShowGraphs']:
+    if r['quiet'] != 1 and r['ShowGraphs']:
         print '--> Calculated RVT \n--> Created RVT regressors'
         subplot(211)
         plot(r['tmidprd'], z_scale(r['rvt'], min(r['p_trace']), max(r['p_trace'])), 'k')
-        if r['p_traceR']:
+        if r['p_trace_r']:
             plot(r['tR'], z_scale(r['RVTRS'], min(r['p_trace']), max(r['p_trace'])), 'm')
         show()
-        if opt['Demo']:
+        if r['Demo']:
             # uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
             pass
 

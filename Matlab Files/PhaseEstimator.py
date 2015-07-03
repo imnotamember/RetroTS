@@ -1,7 +1,7 @@
 __author__ = 'Joshua Zosky'
 
 from numpy import zeros, ones, nonzero, pi, argmin, sin, cos
-from numpy import size, arange, clip, histogram, r_, Inf, divide
+from numpy import size, arange, clip, histogram, r_, Inf, divide, append, delete
 from zscale import z_scale
 import matplotlib.pyplot as plt
 
@@ -59,6 +59,7 @@ def phase_base(amp_type, phasee):
     else: # phase based on amplitude
         # at first scale to the max
         mxamp = max(phasee['p_trace'])
+        phasee['phase_pol'] = []
         gR = z_scale(phasee['v'], 0, mxamp) # Scale, per Glover 2000's paper
         bins = arange(.01, 1.01, .01) * mxamp
         hb_value = my_hist(gR,bins)
@@ -87,8 +88,8 @@ def phase_base(amp_type, phasee):
         phasee['phase_pol'] = zeros(size(phasee['v']))  # Not sure why you would replace the
                                                         # list that you created 10 lines prior to this
         # Add a fake point to tptrace and tntrace to avoid ugly if statements
-        phasee['tp_trace'].append(phasee['t'][-1])
-        phasee['tn_trace'].append(phasee['t'][-1])
+        append(phasee['tp_trace'], phasee['t'][-1])
+        append(phasee['tn_trace'], phasee['t'][-1])
         while i < len(phasee['v']):
             phasee['phase_pol'][i] = cpol
             if phasee['t'][i] == phasee['tp_trace'][itp]:
@@ -99,8 +100,8 @@ def phase_base(amp_type, phasee):
                 inp = min(inp + 1, len(phasee['tn_trace']))
             # cpol, inp, itp, i, R
             i += 1
-        del phasee['tp_trace'][-1]
-        del phasee['tn_trace'][-1]
+        phasee['tp_trace'] = delete(phasee['tp_trace'], -1)
+        phasee['tn_trace'] = delete(phasee['tn_trace'], -1)
         if phasee['show_graphs'] == 1:
             #clf
             plt.plot(phasee['t'], gR,'b')
@@ -173,7 +174,7 @@ def phase_base(amp_type, phasee):
     return phasee
 
 
-def phase_estimator(amp_phase=0, phase_info={}):
+def phase_estimator(amp_phase, phase_info):
     '''
     v_name='',
     amp_phase=0,
@@ -207,8 +208,8 @@ def phase_estimator(amp_phase=0, phase_info={}):
     show_graphs=0
     '''
     """
-    Example: PhaseEstimator.phase_estimator(respiration_peak, )
-    or PhaseEstimator.phase_estimator(v) where v is a column vector
+    Example: PhaseEstimator.phase_estimator(amp_phase, info_dictionary)
+    or PhaseEstimator.phase_estimator(v) where v is a list
     if v is a matrix, each column is processed separately.
     :param var_vector: column vector--list of list(s)
     :param phys_fs: Sampling frequency

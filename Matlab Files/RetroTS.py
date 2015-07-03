@@ -7,29 +7,29 @@ from PhaseEstimator import phase_estimator
 from RVT_from_PeakFinder import rvt_from_peakfinder
 
 
-def retro_ts(respiration_file,cardiac_file,phys_fs, number_of_slices, vol_tr,
-            prefix = 'Output_File_Name',
-            slice_offset = 0,
-            rvt_shifts = range(0, 20, 5),
-            respiration_cutoff_frequency = 3,
-            cardiac_cutoff_frequency = 3,
-            interpolation_style = 'linear',
-            fir_order = 40,
-            quiet = 1,
-            demo = 0,
-            rvt_out = 0,
-            cardiac_out = 0,
-            respiration_out = 0,
-            slice_order = 'alt+z',
-            show_graphs = 1
-            ):
+def retro_ts(respiration_file,cardiac_file,phys_fs, number_of_slices, volume_tr,
+             prefix = 'Output_File_Name',
+             slice_offset = 0,
+             rvt_shifts = range(0, 20, 5),
+             respiration_cutoff_frequency = 3,
+             cardiac_cutoff_frequency = 3,
+             interpolation_style = 'linear',
+             fir_order = 40,
+             quiet = 1,
+             demo = 0,
+             rvt_out = 0,
+             cardiac_out = 0,
+             respiration_out = 0,
+             slice_order = 'alt+z',
+             show_graphs = 1
+             ):
     """
     
     :param respiration_file: 
     :param cardiac_file: 
     :param phys_fs: 
     :param number_of_slices:
-    :param vol_tr: 
+    :param volume_tr:
     :param prefix: 
     :param slice_offset: 
     :param rvt_shifts: 
@@ -57,13 +57,13 @@ def retro_ts(respiration_file,cardiac_file,phys_fs, number_of_slices, vol_tr,
                  'cardiac_file': cardiac_file,
                  'phys_fs': phys_fs,
                  'number_of_slices': number_of_slices,
-                 'vol_tr': vol_tr,
+                 'volume_tr': volume_tr,
                  'prefix': prefix,
                  'slice_offset': slice_offset,
                  'rvt_shifts': rvt_shifts,
                  'respiration_cutoff_frequency': respiration_cutoff_frequency,
                  'cardiac_cutoff_frequency': cardiac_cutoff_frequency,
-                 'interpolation_style': interpolation_style,
+                 'interpolation_style': interpolation_style,  # replacement for 'ResamKernel' variable name
                  'fir_order': fir_order,
                  'quiet': quiet,
                  'demo': demo,
@@ -83,7 +83,7 @@ def retro_ts(respiration_file,cardiac_file,phys_fs, number_of_slices, vol_tr,
     # respiration_info['as_fftwin'] = 0     # 1 == hamming window. 0 == no windowing
     cardiac_info = main_info
     # Time-based phase for cardiac signal
-    cardiac_info['AmpPhase'] = 0
+    cardiac_info['amp_phase'] = 0
 
     # Get the peaks for R and E
     if respiration_file:
@@ -109,19 +109,30 @@ def retro_ts(respiration_file,cardiac_file,phys_fs, number_of_slices, vol_tr,
     # Get the phase
     if respiration_peak:
         print 'Estimating phase for R'
-        respiration_phased = phase_estimator(1, respiration_info)
-        return respiration_phased
-    if cardiac_peak == {}:
+        respiration_phased = phase_estimator(respiration_info['amp_phase'], respiration_info)
+        #return respiration_phased
+    else:
+        respiration_phased = {}
+    if cardiac_peak:
         print 'Estimating phase for E'
-        cardiac_phased = phase_estimator(*cardiac_info)
+        print cardiac_info['v']
+        cardiac_phased = phase_estimator(cardiac_info['amp_phase'], cardiac_info)
+        #return cardiac_phased
+    else:
+        cardiac_phased = {}
 
-    """
+    respiration_info.update(respiration_phased)
+    cardiac_info.update(cardiac_phased)
+
     if respiration_phased:
         print "Computing RVT from peaks"
-        rvt =  rvt_from_peakfinder(respiration_phased)
+        print respiration_info['p_trace_r']
+        rvt = rvt_from_peakfinder(respiration_phased)
 
-    return main_info
+    respiration_info.update(rvt)
 
+    return respiration_info
+    """
     # Show RVT graphs goes here, currently not important though
 
     if 0:
