@@ -152,7 +152,7 @@ def phase_base(amp_type, phasee):
         phasee['phase_slice_reg'][:, 2, i_slice] = sin(2 * phasee['phase_slice'][:,i_slice])
         phasee['phase_slice_reg'][:, 3, i_slice] = cos(2 * phasee['phase_slice'][:,i_slice])
 
-    if (phasee['quiet'] != 1) and phasee['show_graphs']:
+    if phasee['quiet'] == 0 and phasee['show_graphs'] == 1:
         print '--> Calculated phase'
         plt.subplot(413)
         a = divide(divide(phasee['phase'], 2), pi)
@@ -189,8 +189,8 @@ def phase_estimator(amp_phase, phase_info):
     t_mid_prd=[],
     p_trace_mid_prd=[],
     phase=[],
-    RV=[],
-    RVT=[],
+    rv=[],
+    rvt=[],
     var_vector=[],
     phys_fs=(1 / 0.025),
     zero_phase_offset=0.5,
@@ -240,8 +240,8 @@ def phase_estimator(amp_phase, phase_info):
                   t_mid_prd=[],
                   p_trace_mid_prd=[],
                   phase=[],
-                  RV=[],
-                  RVT=[],
+                  rv=[],
+                  rvt=[],
                   var_vector=[],
                   phys_fs=(1 / 0.025),
                   zero_phase_offset=0.5,

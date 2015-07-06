@@ -156,7 +156,8 @@ def clean_resamp(v):
     return v
 
 
-def peak_finder(var_vector,
+def peak_finder(var_v, filename):
+    ''',
                 phys_fs=(1 / 0.025),
                 zero_phase_offset=0.5,
                 quiet=0,
@@ -169,6 +170,7 @@ def peak_finder(var_vector,
                 as_percover=0,
                 as_fftwin=0,
                 sep_dups=0):
+    '''
     """
     Example: PeakFinder('Resp*.1D') or PeakFinder(var_vector) where var_vector is a column vector.
     If var_vector is a matrix, each column is processed separately.
@@ -190,24 +192,37 @@ def peak_finder(var_vector,
     """
     # #clear all but var_vector (useful if I run this function as as script)
     # keep('var_vector', 'opt')
+    var_vector = dict(phys_fs=(1 / 0.025),
+                      zero_phase_offset=0.5,
+                      quiet=0,
+                      resample_fs=(1 / 0.025),
+                      frequency_cutoff=10,
+                      fir_order=80,
+                      interpolation_style='linear',
+                      demo=0,
+                      as_window_width=0,
+                      as_percover=0,
+                      as_fftwin=0,
+                      sep_dups=0)
+    var_vector.update(var_v)
     default_div = 1 / 0.025
-    if (phys_fs != default_div) and (resample_fs == default_div):
-        resample_fs = phys_fs
-    if demo:
-        quiet = 0
+    if (var_vector['phys_fs'] != default_div) and (var_vector['resample_fs'] == default_div):
+        var_vector['resample_fs'] = var_vector['phys_fs']
+    if var_vector['demo']:
+        var_vector['quiet'] = 0
     else:
         pause = False  # pause off
     e = False  # default value for e
     r = {}
     # Some filtering
-    nyquist_filter = phys_fs / 2.0
-    # w[1] = 0.1/filter_nyquist                                         # Cut frequencies below 0.1Hz
-    # w[2] = frequency_cutoff/filter_nyquist                                    # Upper cut off frequency normalized
-    # b = signal.firwin(fir_order, w, 'bandpass')                       # FIR filter of order 40
-    w = frequency_cutoff / nyquist_filter
-    b = firwin(numtaps=(fir_order + 1), cutoff=w, window='hamming')        # FIR filter of order 40
+    nyquist_filter = var_vector['phys_fs'] / 2.0
+    # w[1] = 0.1/filter_nyquist  # Cut frequencies below 0.1Hz
+    # w[2] = var_vector['frequency_cutoff']/filter_nyquist  # Upper cut off frequency normalized
+    # b = signal.firwin(var_vector['fir_order'], w, 'bandpass')  # FIR filter of order 40
+    w = var_vector['frequency_cutoff'] / nyquist_filter
+    b = firwin(numtaps=(var_vector['fir_order'] + 1), cutoff=w, window='hamming')  # FIR filter of order 40
     b = numpy.array(b)
-    no_dups = 1                                     # Remove duplicates that might come up when improving peak location
+    no_dups = 1  # Remove duplicates that might come up when improving peak location
     '''
     if isinstance(var_vector, str):
         L = glob(var_vector)  # NEED TO CONVERT ZGLOBB INTO LIST MAKER OF FILE OBJECTS; I.E. type(L) == list
@@ -228,7 +243,7 @@ def peak_finder(var_vector,
     # del(r) # "Must clear it. Or next line fails" -- Probably unnecessary in Python
     r_list = []
     for i in range(nl):
-        r = {'v_name': '',
+        r = {'v_name': filename,
              't': [],
              'x': [],
              'iz': [],   # zero crossing (peak) locations
@@ -240,15 +255,14 @@ def peak_finder(var_vector,
              't_mid_prd': [],
              'p_trace_mid_prd': [],
              'phase': [],
-             'RV': [],
-             'RVT': []
+             'rv': [],
+             'rvt': []
              }
         r_list.append(r)
     '''
     for i_column in range(nl):
         if L and not os.path.isdir(L):
             r_list[i_column]['v_name'] = '%s%s' % (sys.path, L[i_column]['name'])'''
-    r['v_name'] = var_vector
     #with open(r['v_name'], "rb") as f:
         #v = f.read()
         #v = map(int, v)
@@ -273,12 +287,17 @@ def peak_finder(var_vector,
     v_np = lfilter(b, 1, v_np)
     v_np = numpy.flipud(v_np)
     # Get the analytic signal
-    r['x'] = analytic_signal(v_np, as_window_width * phys_fs, as_percover, as_fftwin)
+    r['x'] = analytic_signal(v_np,
+                             var_vector['as_window_width'] * var_vector['phys_fs'],
+                             var_vector['as_percover'],
+                             var_vector['as_fftwin'])
     # Using local version to illustrate, can use hilbert
     # Doing ffts over smaller windows can improve peak detection in the few instances that go undetected but
     # what value to use is not clear and there seems to be at times more errors introduced in the lower envelope.
     nt = len(r['x'])
-    r['t'] = numpy.arange(0., float(nt) / phys_fs, (1. / phys_fs))  # # % FIX FIX FIX
+    r['t'] = numpy.arange(0.,
+                          float(nt) / var_vector['phys_fs'],
+                          (1. / var_vector['phys_fs']))  # # % FIX FIX FIX
     iz = nonzero((r['x'][0:nt-1].imag * r['x'][1:nt].imag) <= 0)
     iz = iz[0]
     polall = -numpy.sign(r['x'][0:nt-1].imag - r['x'][1:nt].imag)
@@ -302,7 +321,7 @@ def peak_finder(var_vector,
         n_trace.append(pk[i])
         tn_trace.append(tiz[i])
 
-    if quiet == 0:
+    if var_vector['quiet'] == 0:
         print '--> Load signal\n--> Smooth signal\n--> Calculate analytic signal Z\n--> Find zero crossing of imag(Z)\n'
         figure(1)
         subplot(211)
@@ -322,14 +341,14 @@ def peak_finder(var_vector,
         ppp = ppp[0]
         for i in ppp:
             plot(tiz[i], vn[iz[i]], 'bo')
-        if demo:
+        if var_vector['demo']:
             # need to add a pause here - JZ
             # uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
             pass
 
     # Some polishing
     if 1:
-        nww = numpy.ceil((window_width / 2) * phys_fs)
+        nww = numpy.ceil((window_width / 2) * var_vector['phys_fs'])
         pkp = pk
         r['iz'] = iz
         for i in range(len(iz)):
@@ -337,9 +356,9 @@ def peak_finder(var_vector,
             n1 = min(nt,iz[i]+nww)+1
             temp = (r['x'][n0:n1]).real
             if pol[i] > 0:
-                xx, ixx = numpy.max(temp, 0),numpy.argmax(temp, 0)
+                xx, ixx = numpy.max(temp, 0), numpy.argmax(temp, 0)
             else:
-                xx, ixx = numpy.min(temp, 0),numpy.argmin(temp, 0)
+                xx, ixx = numpy.min(temp, 0), numpy.argmin(temp, 0)
             r['iz'][i] = n0 + ixx - 1
             pkp[i] = xx
         tizp = r['t'][r['iz']]
@@ -355,26 +374,26 @@ def peak_finder(var_vector,
 
         if no_dups:
             # remove duplicates
-            if sep_dups:
+            if var_vector['sep_dups']:
                 print 'YOU SHOULD NOT BE USING THIS.\n'
                 print ' left here for the record\n'
-                [r['tp_trace'], r['p_trace']] = remove_duplicates(r['tp_trace'], r['p_trace'], quiet)
-                [r['tn_trace'], r['n_trace']] = remove_duplicates(r['tn_trace'], r['n_trace'], quiet)
+                [r['tp_trace'], r['p_trace']] = remove_duplicates(r['tp_trace'], r['p_trace'], var_vector['quiet'])
+                [r['tn_trace'], r['n_trace']] = remove_duplicates(r['tn_trace'], r['n_trace'], var_vector['quiet'])
             else:
                 r['tp_trace'], r['p_trace'], r['tn_trace'], r['n_trace'] = \
-                    remove_pn_duplicates(r['tp_trace'], r['p_trace'], r['tn_trace'], r['n_trace'], quiet)
+                    remove_pn_duplicates(r['tp_trace'], r['p_trace'], r['tn_trace'], r['n_trace'], var_vector['quiet'])
             if len(r['p_trace']) != len(r['n_trace']):
                 print 'Bad news in tennis shoes. I\'m outta here.\n'
                 e = True
                 return r, e
 
-        if quiet == 0:
+        if var_vector['quiet'] == 0:
             print '--> Improved peak location\n--> Removed duplicates'
             style.use('ggplot')
             subplot(211)
             plot(r['tp_trace'], r['p_trace'], 'r+', r['tp_trace'], r['p_trace'], 'r')
             plot(r['tn_trace'], r['n_trace'], 'b+', r['tn_trace'], r['n_trace'], 'b')
-            if demo:
+            if var_vector['demo']:
                 # need to add a pause here - JZ
                 # uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
                 pass
@@ -390,32 +409,32 @@ def peak_finder(var_vector,
     r['prd'] = r['tp_trace'][1:nptrc] - r['tp_trace'][0:nptrc - 1]
     r['p_trace_mid_prd'] = (r['p_trace'][1:nptrc] + r['p_trace'][0:nptrc - 1]) / 2.0
     r['t_mid_prd'] = (r['tp_trace'][1:nptrc] + r['tp_trace'][0:nptrc - 1]) / 2.0
-    if quiet == 0:
+    if var_vector['quiet'] == 0:
         print '--> Calculated the period (from beat to beat)\n'
         subplot(211)
         plot(r['t_mid_prd'], r['p_trace_mid_prd'], 'kx')
         for i in range(0, len(r['prd'])):
             text(r['t_mid_prd'][i], r['p_trace_mid_prd'][i], ('%.2f' % r['prd'][i]))
-        if demo:
+        if var_vector['demo']:
             # need to add a pause here - JZ
             # uiwait(msgbox('Press button to resume', 'Pausing', 'modal'))
             pass
-    show()
+        show()
 
-    if interpolation_style != '':
+    if var_vector['interpolation_style'] != '':
         # Interpolate to slice sampling time grid:
-        r['tR'] = numpy.arange(0, max(r['t'])+(1. / resample_fs), 1. / resample_fs)
+        r['tR'] = numpy.arange(0, max(r['t'])+(1. / var_vector['resample_fs']), 1. / var_vector['resample_fs'])
         # Squeeze these arrays down from an [x,y] shape to an [x,] shape in order to use interp1d
         r['tp_trace'] = r['tp_trace'].squeeze()
         r['p_trace'] = r['p_trace'].squeeze()
-        r['p_trace_r'] = interp1d(r['tp_trace'], r['p_trace'], interpolation_style, bounds_error=False)
+        r['p_trace_r'] = interp1d(r['tp_trace'], r['p_trace'], var_vector['interpolation_style'], bounds_error=False)
         r['p_trace_r'] = r['p_trace_r'](r['tR'])
         r['tn_trace'] = r['tn_trace'].squeeze()
         r['n_trace'] = r['n_trace'].squeeze()
-        r['n_trace_r'] = interp1d(r['tn_trace'], r['n_trace'], interpolation_style, bounds_error=False)(r['tR'])
+        r['n_trace_r'] = interp1d(r['tn_trace'], r['n_trace'], var_vector['interpolation_style'], bounds_error=False)(r['tR'])
         r['t_mid_prd'] = r['t_mid_prd'].squeeze()
         r['prd'] = r['prd'].squeeze()
-        r['prdR'] = interp1d(r['t_mid_prd'], r['prd'], interpolation_style, bounds_error=False)(r['tR'])
+        r['prdR'] = interp1d(r['t_mid_prd'], r['prd'], var_vector['interpolation_style'], bounds_error=False)(r['tR'])
         # You get NaN when tR exceeds original signal time, so set those
         # to the last interpolated value
         r['p_trace_r'] = clean_resamp(r['p_trace_r'])
@@ -424,7 +443,7 @@ def peak_finder(var_vector,
 
         #if (i_column != nl):
             #input('Hit enter to proceed...','s')
-        #if quiet == 0:
+        #if var_vector['quiet'] == 0:
             #plotsign2(1)
 
     return r, e
