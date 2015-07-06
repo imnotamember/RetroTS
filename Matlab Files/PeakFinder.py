@@ -107,7 +107,7 @@ def analytic_signal(vi, windwidth, percover, win):
 
 def remove_pn_duplicates(tp, vp, tn, vn, quiet):
     ok = zeros((len(tp), 1), dtype=numpy.int8)
-    ok[0] = 1
+    #ok[0] = 1
     j = 0
     for i in range(1, min(len(tp), len(tn))):
         #  0.3 is the minimum time before the next beat
@@ -287,7 +287,7 @@ def peak_finder(var_v, filename):
     v_np = lfilter(b, 1, v_np)
     v_np = numpy.flipud(v_np)
     # Get the analytic signal
-    r['x'] = analytic_signal(v_np,
+    r['x'] = analytic_signal(v_np,################################################################################################THIS IS WHERE YOU LAST TRAILED VALUES TO
                              var_vector['as_window_width'] * var_vector['phys_fs'],
                              var_vector['as_percover'],
                              var_vector['as_fftwin'])
@@ -406,7 +406,8 @@ def peak_finder(var_v, filename):
 
     # Calculate the period
     nptrc = len(r['tp_trace'])
-    r['prd'] = r['tp_trace'][1:nptrc] - r['tp_trace'][0:nptrc - 1]
+    print r['tp_trace']
+    r['prd'] = r['tp_trace'][1:nptrc] - r['tp_trace'][0:nptrc-1]
     r['p_trace_mid_prd'] = (r['p_trace'][1:nptrc] + r['p_trace'][0:nptrc - 1]) / 2.0
     r['t_mid_prd'] = (r['tp_trace'][1:nptrc] + r['tp_trace'][0:nptrc - 1]) / 2.0
     if var_vector['quiet'] == 0:

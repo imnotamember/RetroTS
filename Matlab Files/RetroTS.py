@@ -39,10 +39,10 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
     :param cardiac_cutoff_frequency: 
     :param interpolation_style: kind : str or int, optional
         Specifies the kind of interpolation as a string:
-            ‘linear’, ‘nearest’, ‘zero’, 'slinear', ‘quadratic, ‘cubic’
-            Where 'slinear', ‘quadratic’ and ‘cubic’ refer to a spline interpolation
+            â€˜linearâ€™, â€˜nearestâ€™, â€˜zeroâ€™, 'slinear', â€˜quadratic, â€˜cubicâ€™
+            Where 'slinear', â€˜quadraticâ€™ and â€˜cubicâ€™ refer to a spline interpolation
             of first, second or third order
-        Or as an integer specifying the order of the spline interpolator to use. Default is ‘linear’.
+        Or as an integer specifying the order of the spline interpolator to use. Default is â€˜linearâ€™.
     :param fir_order: 
     :param quiet: 
     :param demo:
@@ -79,12 +79,14 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
 
     # Create information copy for each type of signal
     respiration_info = dict(main_info)
+    respiration_info['frequency_cutoff'] = main_info['respiration_cutoff_frequency']
     # Amplitude-based phase for respiration
     respiration_info['amp_phase'] = 1
     # respiration_info['as_percover'] = 50  # Percent overlap of windows for fft
     # respiration_info['as_windwidth'] = 0  # Window width in seconds for fft, 0 for full window
     # respiration_info['as_fftwin'] = 0     # 1 == hamming window. 0 == no windowing
     cardiac_info = dict(main_info)
+    cardiac_info['frequency_cutoff'] = main_info['cardiac_cutoff_frequency']
     # Time-based phase for cardiac signal
     cardiac_info['amp_phase'] = 0
 

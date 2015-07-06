@@ -44,12 +44,12 @@ a = rts.retro_ts(respiration_file='Resp_epiRT_scan_14.dat',
                  number_of_slices=20,
                  volume_tr=2,
                  show_graphs=1,
-                 quiet=1
+                 quiet=0
                  )
-print a.keys()
-for key in a.keys():
-    print key
-    print a[key]
+# print a.keys()
+# for key in a.keys():
+#     print key
+#     print a[key]
 
 '''
 for i in a:
