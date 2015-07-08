@@ -44,13 +44,13 @@ def fftsegs(ww, po, nv):
         bli = []
         ble = []
         # % How many blocks?
-        jmp = numpy.floor((100-po)*ww/100) # jump from block to block
-        nblck = nv/jmp
+        jmp = numpy.floor((100 - po) * ww / 100)  # jump from block to block
+        nblck = nv / jmp
         ib = 0
         cnt = 0
-        while ble == [] or ble[-1] < (nv-1):
+        while ble == [] or ble[-1] < (nv - 1):
             bli.append(ib)
-            ble.append(min(ib+ww-1, nv))
+            ble.append(min(ib + ww - 1, nv))
             cnt += 1
             ib += jmp
         # If the last block is too small, spread the love
@@ -63,7 +63,7 @@ def fftsegs(ww, po, nv):
         elif ble[-1] - bli[-1] < (0.75 * ww):  # Too large to merge, spread it
             ww = ww + numpy.floor((ble[-1] - bli[-1])/nblck)
             out = 0
-        else: # Last block big enough, proceed
+        else:  # Last block big enough, proceed
             out = 1
         # ble - bli + 1
         # out
@@ -97,8 +97,8 @@ def analytic_signal(vi, windwidth, percover, win):
             wind[1:(nv / 2)] = 2  # double pos. freq
 
         else:
-            wind[1] = 1
-            wind[range(2, (nv + 1) / 2)] = 2
+            wind[0] = 1
+            wind[range(1, (nv + 1) / 2)] = 2
         h = ifft(fv * wind)
     for i in range(len(h)):
         h[i] /= numpy.complex(num[i])
@@ -287,7 +287,7 @@ def peak_finder(var_v, filename):
     v_np = lfilter(b, 1, v_np)
     v_np = numpy.flipud(v_np)
     # Get the analytic signal
-    r['x'] = analytic_signal(v_np,################################################################################################THIS IS WHERE YOU LAST TRAILED VALUES TO
+    r['x'] = analytic_signal(v_np,
                              var_vector['as_window_width'] * var_vector['phys_fs'],
                              var_vector['as_percover'],
                              var_vector['as_fftwin'])
@@ -347,7 +347,7 @@ def peak_finder(var_v, filename):
             pass
 
     # Some polishing
-    if 1:
+    if 1 == 1:
         nww = numpy.ceil((window_width / 2) * var_vector['phys_fs'])
         pkp = pk
         r['iz'] = iz
