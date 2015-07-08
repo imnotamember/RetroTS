@@ -37,11 +37,11 @@ def rvt_from_peakfinder(r):
     # incomplete pair at the end
 
     nptrc = len(r['tp_trace'])
-    r['rvt'] = r['rv'][0:nptrc - 1] / r['prd']
+    r['rvt'] = r['rv'][0:nptrc] / r['prd']
     if r['p_trace_r'].any:
         r['rvr'] = subtract(r['p_trace_r'], r['n_trace_r'])
         r['rvtr'] = numpy.ndarray(numpy.shape(r['rvr']))
-        divide(r['rvr'], r['prdR'], r['rvtr'])
+        divide(r['rvr'], r['prdR'], r['rvtr'])             ###############################################Trail left off here - was looking at p_trace_r and n_trace_r
         # Smooth RVT so that we can resample it at volume_tr later
         fnyq = r['phys_fs'] / 2             # nyquist of physio signal
         fcut = 2 / r['volume_tr']           # cut below nyquist for volume_tr

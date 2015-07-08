@@ -424,7 +424,12 @@ def peak_finder(var_v, filename):
 
     if var_vector['interpolation_style'] != '':
         # Interpolate to slice sampling time grid:
-        r['tR'] = numpy.arange(0, max(r['t'])+(1. / var_vector['resample_fs']), 1. / var_vector['resample_fs'])
+        step_interval = 1. / var_vector['resample_fs']
+        #r['tR'] = numpy.arange(0, max(r['t']) + step_interval, step_interval)
+        step_size = int(max(r['t']) / step_interval) + 1
+        r['tR'] = []
+        for i in range(0, step_size):
+            r['tR'].append(i * step_interval)
         # Squeeze these arrays down from an [x,y] shape to an [x,] shape in order to use interp1d
         r['tp_trace'] = r['tp_trace'].squeeze()
         r['p_trace'] = r['p_trace'].squeeze()

@@ -22,7 +22,8 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
              cardiac_out=1,
              respiration_out=1,
              slice_order='alt+z',
-             show_graphs=0
+             show_graphs=0,
+             zero_phase_offset=0
              ):
     """
     
@@ -74,7 +75,8 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
                  'cardiac_out': cardiac_out,
                  'respiration_out': respiration_out,
                  'slice_order': slice_order,
-                 'show_graphs': show_graphs
+                 'show_graphs': show_graphs,
+                 'zero_phase_offset': zero_phase_offset
                  }
 
     # Create information copy for each type of signal
@@ -238,7 +240,7 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
 
     savetxt('%s.slibase.1D' % main_info['prefix'],
             column_stack(main_info['reml_out']),
-            fmt='%.3f',
+            fmt='%.4f',
             delimiter=' ',
             newline='\n',
             header=('%s%s' % (label, tail)),
