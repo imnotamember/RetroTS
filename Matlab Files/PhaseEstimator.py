@@ -42,20 +42,24 @@ def phase_base(amp_type, phasee):
                     # One should resample period[i] so that it is
                     # estimated at each time in phasee['t'][j],
                     # dunno if that makes much of a difference in the end however.
-                    phasee['phase'][j] = (phasee['t'][j] - phasee['tp_trace'][i]) / (phasee['prd'][i]\
-                                         + phasee['zero_phase_offset'])
+                    if j == 10975:
+                        pass
+                    phasee['phase'][j] = (phasee['t'][j] - phasee['tp_trace'][i]) / phasee['prd'][i]\
+                                         + phasee['zero_phase_offset']
                     if phasee['phase'][j] < 0:
                         phasee['phase'][j] = -phasee['phase'][j]
                     if phasee['phase'][j] > 1:
                         phasee['phase'][j] -= 1
                 j += 1
+            if i == 124:
+                pass
             i += 1
 
         # Remove the points flagged as unset
-        temp = nonzero(phasee['phase']<-1)
-        phasee['phase'][temp]  = 0.0
+        temp = nonzero(phasee['phase'] < -1)
+        phasee['phase'][temp] = 0.0
         # Change phase to radians
-        phasee['phase'] = phasee['phase'] * 2. * pi
+        phasee['phase'] = phasee['phase'] * 2 * pi
     else:  # phase based on amplitude
         # at first scale to the max
         mxamp = max(phasee['p_trace'])
@@ -247,7 +251,7 @@ def phase_estimator(amp_phase, phase_info):
                   zero_phase_offset=0.5,
                   quiet=0,
                   resample_fs=(1 / 0.025),
-                  f_cutoff=10,
+                  frequency_cutoff=10,
                   fir_order=80,
                   resample_kernel='linear',
                   demo=0,

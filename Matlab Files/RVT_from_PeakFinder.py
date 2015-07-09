@@ -45,13 +45,13 @@ def rvt_from_peakfinder(r):
         # Smooth RVT so that we can resample it at volume_tr later
         fnyq = r['phys_fs'] / 2             # nyquist of physio signal
         fcut = 2 / r['volume_tr']           # cut below nyquist for volume_tr
-        w = float(r['f_cutoff']) / float(fnyq)     # cut off frequency normalized
+        w = float(r['frequency_cutoff']) / float(fnyq)     # cut off frequency normalized
         b = firwin(numtaps=(r['fir_order'] + 1), cutoff=w, window='hamming')
         v = r['rvtr']
         mv = mean(v)
         # remove the mean
         v = (v - mv)
-        # filter both ways to cancel phase shift
+        # filter both ways to cancel phase shift ######################Major failures in the next 4 lines, check axes for problems
         v = lfilter(b, 1, v)
         v = numpy.flipud(v)
         v = lfilter(b, 1, v)

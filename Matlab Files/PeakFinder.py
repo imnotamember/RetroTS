@@ -106,13 +106,15 @@ def analytic_signal(vi, windwidth, percover, win):
 
 
 def remove_pn_duplicates(tp, vp, tn, vn, quiet):
-    ok = zeros((len(tp), 1), dtype=numpy.int8)
+    ok = zeros((len(tp), 1), dtype=numpy.int32)
     #ok[0] = 1
     j = 0
     for i in range(1, min(len(tp), len(tn))):
         #  0.3 is the minimum time before the next beat
         if (tp[i] != tp[i-1]) and (tn[i] != tn[i-1]) and (tp[i] - tp[i-1] > 0.3):
             j += 1
+            if j == 127:
+                print 'stop'
             ok[j] = i
         else:
             if not quiet:
