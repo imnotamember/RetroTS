@@ -5,7 +5,7 @@ from numpy import zeros, size, savetxt, column_stack, shape
 from PeakFinder import peak_finder
 from PhaseEstimator import phase_estimator
 from RVT_from_PeakFinder import rvt_from_peakfinder
-
+from Show_RVT_Peak import show_rvt_peak
 
 def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_tr,
              prefix='Output_File_Name',
@@ -136,6 +136,11 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
 
     respiration_info.update(rvt)
 
+    # Show some results
+    if show_graphs:
+        if respiration_info:
+            print 'Showing RVT Peaks for R\n'
+            show_rvt_peak(respiration_info, 1)
 
     """
     # Not sure if this code is necessary, 'if 0' is never run in MATLAB

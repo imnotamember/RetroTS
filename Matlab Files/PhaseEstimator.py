@@ -1,7 +1,7 @@
 __author__ = 'Joshua Zosky'
 
 from numpy import zeros, ones, nonzero, pi, argmin, sin, cos
-from numpy import size, arange, clip, histogram, r_, Inf, divide, append, delete
+from numpy import size, arange, clip, histogram, r_, Inf, divide, append, delete, array
 from zscale import z_scale
 import matplotlib.pyplot as plt
 
@@ -92,8 +92,8 @@ def phase_base(amp_type, phasee):
         phasee['phase_pol'] = zeros(size(phasee['v']))  # Not sure why you would replace the
                                                         # list that you created 10 lines prior to this
         # Add a fake point to tptrace and tntrace to avoid ugly if statements
-        append(phasee['tp_trace'], phasee['t'][-1])
-        append(phasee['tn_trace'], phasee['t'][-1])
+        phasee['tp_trace'] = append(phasee['tp_trace'], phasee['t'][-1])
+        phasee['tn_trace'] = append(phasee['tn_trace'], phasee['t'][-1])
         while i < len(phasee['v']):
             phasee['phase_pol'][i] = cpol
             if phasee['t'][i] == phasee['tp_trace'][itp]:
@@ -138,7 +138,8 @@ def phase_base(amp_type, phasee):
         for i in range(1, 100):
             hbsum.append(hbsum[i - 1] + (float(hb_value[i]) / shb))
         for i in range(len(phasee['t'])):
-            phasee['phase'].append(pi * hbsum[int(gR[i])-1] * phasee['phase_pol'][i])
+            phasee['phase'].append(pi * hbsum[int(gR[i]) - 1] * phasee['phase_pol'][i])
+        phasee['phase'] = array(phasee['phase'])
 
     # Time series time vector
     phasee['time_series_time'] = arange(0, (max(phasee['t']) - 0.5 * phasee['volume_tr']), phasee['volume_tr'])

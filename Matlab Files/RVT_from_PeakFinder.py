@@ -37,7 +37,7 @@ def rvt_from_peakfinder(r):
     # incomplete pair at the end
 
     nptrc = len(r['tp_trace'])
-    r['rvt'] = r['rv'][0:nptrc] / r['prd']
+    r['rvt'] = r['rv'][0:nptrc - 1] / r['prd']
     if r['p_trace_r'].any:
         r['rvr'] = subtract(r['p_trace_r'], r['n_trace_r'])
         r['rvtr'] = numpy.ndarray(numpy.shape(r['rvr']))

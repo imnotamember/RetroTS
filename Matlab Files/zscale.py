@@ -1,6 +1,6 @@
 __author__ = 'Joshua Zosky'
 
-from numpy import percentile, size, clip, array
+from numpy import percentile, size, array
 
 
 def z_scale(x, lower_bound, upper_bound, perc=[]):
