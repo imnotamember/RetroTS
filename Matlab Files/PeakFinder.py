@@ -270,10 +270,9 @@ def peak_finder(var_v, filename):
         #v = f.read()
         #v = map(int, v)
     v = []
-    h = open(r['v_name'])
-    for line in h:
-        if line.strip():
-            v.append(int(line))
+    with open(r['v_name'], 'rb') as h:
+        for line in h:
+            v.append(int(line.strip()))
     v_np = numpy.asarray(v)
         #else:
             #r_list[i_column]['v_name'] = 'vector input col %d' % i_column
@@ -368,9 +367,7 @@ def peak_finder(var_v, filename):
             if i == 100:
                 print 'pause'
         tizp = r['t'][r['iz']]
-        with open('r_iz.csv', 'w') as f:
-            for i in r['iz']:
-                f.write("%s\n" % i)
+
         ppp = nonzero(pol > 0)
         ppp = ppp[0]
         r['p_trace'] = pkp[ppp]
