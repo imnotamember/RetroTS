@@ -43,7 +43,7 @@ def show_rvt_peak(r, fg):
     title('Scaled by magnitude of analytical signal') # , 'Interpreter', 'None')
     legend(['Scaled signal', 'phase'])
     subplot(414)
-    plot(r['time_series_time'], r['phase_slice'][:, 0], 'rx')  # This one isn't any different than the next plot line, check out why values are funky
+    plot(r['time_series_time'], r['phase_slice'][:, 0], 'ro')  # This one isn't any different than the next plot line, check out why values are funky
     plot(r['time_series_time'], r['phase_slice'][:, 1], 'bo')
     plot(r['time_series_time'], r['phase_slice'][:, 1], 'b-')
     plot(r['t'], r['phase'], 'k')

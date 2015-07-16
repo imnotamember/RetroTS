@@ -1,7 +1,7 @@
 __author__ = 'Joshua Zosky'
 
 import numpy # delete this and replace with specific functions
-from numpy import nonzero, add, subtract, divide, mean, zeros
+from numpy import nonzero, add, subtract, divide, mean, zeros, around
 from scipy.signal import firwin, lfilter
 from scipy.interpolate import interp1d
 from pylab import plot, subplot, show, text, style, figure
@@ -40,6 +40,12 @@ def rvt_from_peakfinder(r):
     r['rvt'] = r['rv'][0:nptrc - 1] / r['prd']
     if r['p_trace_r'].any:
         r['rvr'] = subtract(r['p_trace_r'], r['n_trace_r'])
+        with open('rvr.csv', 'w') as f:
+            for i in r['rvr']:
+                f.write("%s\n" % i)
+        with open('prdR.csv', 'w') as f:
+            for i in r['prdR']:
+                f.write("%s\n" % i)
         r['rvtr'] = numpy.ndarray(numpy.shape(r['rvr']))
         divide(r['rvr'], r['prdR'], r['rvtr'])
         # Smooth RVT so that we can resample it at volume_tr later
@@ -48,6 +54,10 @@ def rvt_from_peakfinder(r):
         w = float(r['frequency_cutoff']) / float(fnyq)     # cut off frequency normalized
         b = firwin(numtaps=(r['fir_order'] + 1), cutoff=w, window='hamming')
         v = r['rvtr']
+        around(v, 6, v)
+        with open('a.csv', 'w') as f:
+            for i in v:
+                f.write("%s\n" % i)
         mv = mean(v)
         # remove the mean
         v = (v - mv)
@@ -67,8 +77,10 @@ def rvt_from_peakfinder(r):
         print sind
         sind[nonzero(sind < 0)] = 0
         sind[nonzero(sind > (len(r['t']) - 1))] = len(r['t']) - 1
-        rvt_shf = interp1d(r['t'], r['rvtrs'][sind], r['interpolation_style'], bounds_error=False)
+        rvt_shf = interp1d(r['t'], r['rvtrs'][sind], r['interpolation_style'], bounds_error=True)
         rvt_shf_y = rvt_shf(r['time_series_time'])
+        subplot(111)
+        plot(r['time_series_time'], rvt_shf_y)
         r['rvtrs_slc'][:][i] = rvt_shf_y
 
     if r['quiet'] == 0 and r['show_graphs'] == 1:

@@ -84,11 +84,11 @@ def phase_base(amp_type, phasee):
         if tp < tn:
             # Expiring phase (peak behind us)
             cpol = -1
-            itp = 2
+            itp = 1
         else:
             # Inspiring phase (bottom behind us)
             cpol = 1
-            inp = 2
+            inp = 1
         phasee['phase_pol'] = zeros(size(phasee['v']))  # Not sure why you would replace the
                                                         # list that you created 10 lines prior to this
         # Add a fake point to tptrace and tntrace to avoid ugly if statements
@@ -143,8 +143,8 @@ def phase_base(amp_type, phasee):
 
     # Time series time vector
     phasee['time_series_time'] = arange(0, (max(phasee['t']) - 0.5 * phasee['volume_tr']), phasee['volume_tr'])
-    phasee['phase_slice'] = zeros((len(phasee['time_series_time']),phasee['number_of_slices']))
-    phasee['phase_slice_reg'] = zeros((len(phasee['time_series_time']),4,phasee['number_of_slices']))
+    phasee['phase_slice'] = zeros((len(phasee['time_series_time']), phasee['number_of_slices']))
+    phasee['phase_slice_reg'] = zeros((len(phasee['time_series_time']), 4, phasee['number_of_slices']))
     for i_slice in range(phasee['number_of_slices']):
         tslc = phasee['time_series_time'] + phasee['slice_offset'][i_slice]
         for i in range(len(phasee['time_series_time'])):

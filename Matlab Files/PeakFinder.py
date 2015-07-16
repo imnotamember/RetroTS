@@ -106,7 +106,8 @@ def analytic_signal(vi, windwidth, percover, win):
 
 
 def remove_pn_duplicates(tp, vp, tn, vn, quiet):
-    ok = zeros((len(tp), 1), dtype=numpy.int32)
+    ok = zeros((1, len(tp)), dtype=numpy.int32)
+    ok = ok[0]
     #ok[0] = 1
     j = 0
     for i in range(1, min(len(tp), len(tn))):
@@ -119,7 +120,7 @@ def remove_pn_duplicates(tp, vp, tn, vn, quiet):
         else:
             if not quiet:
                 print 'Dropped peak at %s sec' % tp[i]
-    ok = ok[:j+1]
+    ok = ok[:j + 1]
     tp = tp[ok]
     vp = vp[ok]
     tn = tn[ok]
@@ -148,10 +149,10 @@ def clean_resamp(v):
     i_good = nonzero(numpy.isfinite(v))  # the good
     i_good = i_good[0]
     for i in range(0, len(i_nan)):
-        if i_nan[i] < i_good[1]:
-            v[i_nan[i]] = v[i_good[1]]
+        if i_nan[i] < i_good[0]:
+            v[i_nan[i]] = v[i_good[0]]
         elif i_nan[i] > i_good[-1]:
-            v[i_nan[i]]= v[i_good[-1]]
+            v[i_nan[i]] = v[i_good[-1]]
         else:
             print 'Error: Unexpected NaN case'
             v[i_nan[i]] = 0
@@ -293,6 +294,7 @@ def peak_finder(var_v, filename):
                              var_vector['as_window_width'] * var_vector['phys_fs'],
                              var_vector['as_percover'],
                              var_vector['as_fftwin'])
+
     # Using local version to illustrate, can use hilbert
     # Doing ffts over smaller windows can improve peak detection in the few instances that go undetected but
     # what value to use is not clear and there seems to be at times more errors introduced in the lower envelope.
@@ -353,18 +355,22 @@ def peak_finder(var_v, filename):
         nww = numpy.ceil((window_width / 2) * var_vector['phys_fs'])
         pkp = pk
         r['iz'] = iz
-        for i in range(len(iz)):
-            n0 = max(2,iz[i]-nww)
-            n1 = min(nt,iz[i]+nww)+1
-            temp = (r['x'][n0:n1]).real
+        for i in range(len(iz)):######################left off here, turns out there's a difference in floating point precision in the calculation of r['x'], maybe look into the reason why they'd be different
+            n0 = max(2, iz[i] - nww)
+            n1 = min(nt, iz[i] + nww)
+            temp = (r['x'][n0:n1 + 1]).real
             if pol[i] > 0:
                 xx, ixx = numpy.max(temp, 0), numpy.argmax(temp, 0)
             else:
                 xx, ixx = numpy.min(temp, 0), numpy.argmin(temp, 0)
             r['iz'][i] = n0 + ixx - 1
             pkp[i] = xx
+            if i == 100:
+                print 'pause'
         tizp = r['t'][r['iz']]
-
+        with open('r_iz.csv', 'w') as f:
+            for i in r['iz']:
+                f.write("%s\n" % i)
         ppp = nonzero(pol > 0)
         ppp = ppp[0]
         r['p_trace'] = pkp[ppp]
@@ -432,16 +438,21 @@ def peak_finder(var_v, filename):
         r['tR'] = []
         for i in range(0, step_size):
             r['tR'].append(i * step_interval)
+        '''
+        with open('tR.csv', 'w') as f:
+            for i in r['tR']:
+                f.write("%s\n" % i)
         # Squeeze these arrays down from an [x,y] shape to an [x,] shape in order to use interp1d
         r['tp_trace'] = r['tp_trace'].squeeze()
         r['p_trace'] = r['p_trace'].squeeze()
+        '''
         r['p_trace_r'] = interp1d(r['tp_trace'], r['p_trace'], var_vector['interpolation_style'], bounds_error=False)
         r['p_trace_r'] = r['p_trace_r'](r['tR'])
-        r['tn_trace'] = r['tn_trace'].squeeze()
-        r['n_trace'] = r['n_trace'].squeeze()
+        #r['tn_trace'] = r['tn_trace'].squeeze()
+        #r['n_trace'] = r['n_trace'].squeeze()
         r['n_trace_r'] = interp1d(r['tn_trace'], r['n_trace'], var_vector['interpolation_style'], bounds_error=False)(r['tR'])
-        r['t_mid_prd'] = r['t_mid_prd'].squeeze()
-        r['prd'] = r['prd'].squeeze()
+        #r['t_mid_prd'] = r['t_mid_prd'].squeeze()
+        #r['prd'] = r['prd'].squeeze()
         r['prdR'] = interp1d(r['t_mid_prd'], r['prd'], var_vector['interpolation_style'], bounds_error=False)(r['tR'])
         # You get NaN when tR exceeds original signal time, so set those
         # to the last interpolated value
