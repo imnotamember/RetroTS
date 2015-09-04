@@ -5,7 +5,7 @@ from numpy import zeros, size, savetxt, column_stack, shape
 from PeakFinder import peak_finder
 from PhaseEstimator import phase_estimator
 from RVT_from_PeakFinder import rvt_from_peakfinder
-
+from Show_RVT_Peak import show_rvt_peak
 
 def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_tr,
              prefix='Output_File_Name',
@@ -55,7 +55,7 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
     :return:
     """
     if not slice_offset:
-        slice_offset = zeros((number_of_slices, 1))
+        slice_offset = zeros((1, number_of_slices))
     main_info = {'respiration_file': respiration_file,
                  'cardiac_file': cardiac_file,
                  'phys_fs': phys_fs,
@@ -78,6 +78,41 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
                  'show_graphs': show_graphs,
                  'zero_phase_offset': zero_phase_offset
                  }
+    # Determining main_info['slice_offset'] based upon main_info['slice_order'], main_info['volume_tr'],
+    #  and main_info['number_of_slices'].
+    tt = 0.0  # Default float value to start iterations
+    dtt = float(main_info['volume_tr']) / float(main_info['number_of_slices'])  # Increments for iteration
+    main_info['slice_offset'] = [0] * main_info['number_of_slices']  # Initial value for main_info['slice_offset']
+    slice_file_list = []    # List for using external file for main_info['slice_offset'] values/
+                            # Indicates if using external file in last loop
+    if main_info['slice_order'][0:3] == 'alt':  # Alternating?
+        for i in range(0, main_info['number_of_slices'], 2):
+            main_info['slice_offset'][i] = tt
+            tt += dtt
+        for i in range(1, main_info['number_of_slices'], 2):
+            main_info['slice_offset'][i] = tt
+            tt += dtt
+    elif main_info['slice_order'][0:3] == 'seq':  #Sequential?
+        for i in range(0, main_info['number_of_slices']):
+            main_info['slice_offset'][i] = tt
+            tt += dtt
+    elif main_info['slice_order'] == 'Custom':  #Does nothing, unsure of it's purpose
+        pass
+    else:   # Open external file specified in argument line,
+            # fill SliceFileList with values, then load into main_info['slice_offset']
+        with open(main_info['slice_order'], 'r') as f:
+            for i in f.readlines():
+                slice_file_list.append(int(i))
+                if len(slice_file_list) != main_info['number_of_slices']:
+                    print 'Could not read enough slice offsets from file'
+                    print 'File should have as many offsets as number_of_slices'
+                    quit()
+            main_info['slice_offset'] = slice_file_list
+    if main_info['slice_order'][3] == '-' and slice_file_list == []:    # Check for a minus to indicate
+                                                                        #  a reversed offset list
+        main_info['slice_offset'].reverse()
+    if main_info['quiet'] != 1:  # Show the slice timing (P.S. Printing is very time consuming in python)
+        print 'Slice timing:', main_info['slice_offset']
 
     # Create information copy for each type of signal
     respiration_info = dict(main_info)
@@ -136,6 +171,11 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
 
     respiration_info.update(rvt)
 
+    # Show some results
+    if show_graphs:
+        if respiration_info:
+            print 'Showing RVT Peaks for R\n'
+            show_rvt_peak(respiration_info, 1)
 
     """
     # Not sure if this code is necessary, 'if 0' is never run in MATLAB
@@ -143,7 +183,7 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
 
     if 0:
         # Write retroicor regressors
-        for i in range(0, opt['Nslices']):
+        for i in range(0, opt['main_info['number_of_slices']']):
             fname = '%s.RetroCard.slc%02d.1D' % (opt['Prefix'], i)
             #wryte3(cardiac_phased['phase_slice_reg'][:,:,i], fname, 1);
             savetxt(fname, cardiac_phased['phase_slice_reg'][:,:,i], fmt="%12.6G")
