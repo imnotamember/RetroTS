@@ -1,11 +1,31 @@
 # coding=utf-8
 __author__ = 'Joshua Zosky'
 
+"""
+    Copyright 2015 Joshua Zosky
+    joshua.e.zosky@gmail.com
+
+    This file is part of "RetroTS".
+    "RetroTS" is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    "RetroTS" is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License
+    along with "RetroTS".  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 from numpy import zeros, size, savetxt, column_stack, shape
 from PeakFinder import peak_finder
 from PhaseEstimator import phase_estimator
 from RVT_from_PeakFinder import rvt_from_peakfinder
 from Show_RVT_Peak import show_rvt_peak
+
+
+
 
 def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_tr,
              prefix='Output_File_Name',
@@ -297,3 +317,142 @@ def retro_ts(respiration_file, cardiac_file, phys_fs, number_of_slices, volume_t
     main_info['error'] = 0
 
     return main_info
+
+if __name__ == "__main__":
+
+    import sys
+
+    opt_dict = {"-help":"""This function creates slice-based regressors for regressing out
+components of heart rate, respiration and respiration volume per time.
+
+Windows Example:
+C:\\afni\\python RetroTS.py -r resp_file.dat -c card_file.dat -p 50 -n 20 -v 2
+Mac/Linux Example:
+/usr/afni/python RetroTS.py -r resp_file.dat -c card_file.dat -p 50 -n 20 -v 2
+
+Following are the mandatory and optional parameters that can be entered after RetroTS.py,
+ each separated by a space.
+
+    Mandatory:
+    ----------
+    :param -r: (respiration_file) Respiration data file
+    :param -c: (cardiac_file) Cardiac data file
+    :param -p: (phys_fs) Physioliogical signal sampling frequency in Hz.
+    :param -n: (number_of_slices) Number of slices
+    :param -v: (volume_tr) Volume TR in seconds
+    Note:   These parameters are the only single-letter parameters, as they are mandatory and frequently typed.
+            The following optional parameters must be fully spelled out.
+
+     Optional:
+     ---------
+     Prefix: Prefix of output file
+     SliceOffset: Vector of slice acquisition time offsets in seconds.
+                  (default is equivalent of alt+z)
+     RVTshifts: Vector of shifts in seconds of RVT signal.
+                (default is [0:5:20])
+     RespCutoffFreq: Cut off frequency in Hz for respiratory lowpass filter
+                     (default 3 Hz)
+     CardCutoffFreq: Cut off frequency in Hz for cardiac lowpass filter
+                     (default 3 Hz)
+     ResamKernel: Resampling kernel.
+                 (default is 'linear', see help interp1 for more options)
+     FIROrder: Order of FIR filter. (default is 40)
+     Quiet: [1]/0  flag. (defaut is 1) Show talkative progress as the program runs
+     Demo: [1]/0 flag. (default is 0)
+     RVT_out: [1]/0 flag for writing RVT regressors
+     Card_out: [1]/0 flag for writing Card regressors
+     Resp_out: [1]/0 flag for writing Resp regressors
+     SliceOrder: ['alt+z']/'alt-z'/'seq+z'/'seq-z'/'Custom'/filename.1D
+                 Slice timing information in seconds. The default is
+                 alt+z. See 3dTshift help for more info. 'Custom' allows
+                 the program to use the values stored in the
+                 Opt.SliceOffset array. If a value is placed into the
+                 SliceOrder field other than these, it is assumed to be
+                 the name of a 1D / text file containing the times for
+                 each slice (also in seconds).
+
+Example:
+
+  Opt.Respfile = 'Resp_epiRT_scan_14.dat'
+  Opt.Cardfile = 'ECG_epiRT_scan_14.dat'
+  Opt.VolTR = 2
+  Opt.Nslices = 20;
+  Opt.PhysFS = 1./0.02;   20 msec sampling period, 50 samples per second
+  RetroTS(Opt);
+
+
+ Input Mode 2 (for testing purposes only):
+  Opt: Scan number for file triplet to be processed.
+      Files called Resp*SN*, ECG*SN*, and scan*SN* are presumed to
+      exist in the directory from which RetroTS is called.
+      Many parameters' value are hard coded to defaults
+
+ Output:
+  Opt: Structure of options including default settings.
+
+
+ This option is not to be used because window width calculations do not use it
+     ResampFS: Frequency of resampled signal (default is same as PhysFS)""",
+                "-r": None,
+                "-c": None,
+                "-p": None,
+                "-n": None,
+                "-v": None,
+                "-prefix": 'Output_File_Name',
+                "-slice_offset": 0,
+                "-slice_major": 1,
+                "-rvt_shifts": range(0, 21, 5),
+                "-respiration_cutoff_frequency": 3,
+                "-cardiac_cutoff_frequency": 3,
+                "-interpolation_style": 'linear',
+                "-fir_order": 40,
+                "-quiet": 1,
+                "-demo": 0,
+                "-rvt_out": 1,
+                "-cardiac_out": 1,
+                "-respiration_out": 1,
+                "-slice_order": 'alt+z',
+                "-show_graphs": 0,
+                "-zero_phase_offset": 0}
+
+    if len(sys.argv) < 2:
+        print 'You need to provide parameters. If you need help, rerun the program using the "-help" argument:\
+                \n"python RetroTS.py -help"'
+        quit()
+    else:
+        opts = sys.argv[1:]
+        temp_opt = None
+        for opt in opts:
+            if opt in opt_dict:
+                if opt == '-help':
+                    print opt_dict[opt]
+                    quit()
+            elif temp_opt in opt_dict:
+                opt_dict[temp_opt] = opt
+            else:
+                print "No such command '%s', try:" % opt
+                for key in opt_dict.keys():
+                    print "%s" % key
+                quit()
+            temp_opt = opt
+    retro_ts(respiration_file=opt_dict['-r'],
+             cardiac_file=opt_dict['-c'],
+             phys_fs=int(opt_dict['-p']),
+             number_of_slices=int(opt_dict['-n']),
+             volume_tr=int(opt_dict['-v']),
+             prefix=opt_dict['prefix'],
+             slice_offset=opt_dict['slice_offset'],
+             slice_major=opt_dict['slice_major'],
+             rvt_shifts=opt_dict['rvt_shifts'],
+             respiration_cutoff_frequency=opt_dict['respiration_cutoff_frequency'],
+             cardiac_cutoff_frequency=opt_dict['cardiac_cutoff_frequency'],
+             interpolation_style=opt_dict['interpolation_style'],
+             fir_order=opt_dict['fir_order'],
+             quiet=opt_dict['quiet'],
+             demo=opt_dict['demo'],
+             rvt_out=opt_dict['rvt_out'],
+             cardiac_out=opt_dict['cardiac_out'],
+             respiration_out=opt_dict['respiration_out'],
+             slice_order=opt_dict['slice_order'],
+             show_graphs=opt_dict['show_graphs'],
+             zero_phase_offset=opt_dict['zero_phase_offset'])
